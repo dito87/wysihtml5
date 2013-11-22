@@ -107,7 +107,7 @@
     }
     return (descendantNode == node) ? newNode : splitNodeAt(node, newNode.parentNode, rangy.dom.getNodeIndex(newNode));
   }
-  
+
   function Merge(firstNode) {
     this.isElementMerge = (firstNode.nodeType == wysihtml5.ELEMENT_NODE);
     this.firstTextNode = this.isElementMerge ? firstNode.lastChild : firstNode;
@@ -274,7 +274,12 @@
     },
 
     isRemovable: function(el) {
-      return rangy.dom.arrayContains(this.tagNames, el.tagName.toLowerCase()) && wysihtml5.lang.string(el.className).trim() == this.cssClass;
+      var 
+        isContaining = rangy.dom.arrayContains(this.tagNames, el.tagName.toLowerCase()),
+        isSameClass = wysihtml5.lang.string(el.className).trim() === this.cssClass,
+        isAncestorEmptyClass = el.className.trim().length <= 0;
+      
+      return isAncestorEmptyClass || (isContaining && isSameClass);
     },
 
     undoToTextNode: function(textNode, range, ancestorWithClass) {
@@ -297,6 +302,13 @@
       }
       if (this.isRemovable(ancestorWithClass)) {
         replaceWithOwnChildren(ancestorWithClass);
+      }
+      
+      // Remove element if empty
+      var content = ancestorWithClass.innerHTML || ancestorWithClass.data;
+      if(content && content.trim().length <= 0) {
+        range.collapseAfter(ancestorWithClass);
+        ancestorWithClass.remove();
       }
     },
 
