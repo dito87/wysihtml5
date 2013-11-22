@@ -276,10 +276,9 @@
     isRemovable: function(el) {
       var 
         isContaining = rangy.dom.arrayContains(this.tagNames, el.tagName.toLowerCase()),
-        isSameClass = wysihtml5.lang.string(el.className).trim() === this.cssClass,
-        isAncestorEmptyClass = el.className.trim().length <= 0;
-      
-      return isAncestorEmptyClass || (isContaining && isSameClass);
+        isSameClass = wysihtml5.lang.string(el.className).trim() === this.cssClass;
+
+      return this.similarClassRegExp || (isContaining && isSameClass);
     },
 
     undoToTextNode: function(textNode, range, ancestorWithClass) {
@@ -293,22 +292,19 @@
           range.setEndAfter(ancestorWithClass);
         }
         if (ancestorRange.isPointInRange(range.startContainer, range.startOffset) && isSplitPoint(range.startContainer, range.startOffset)) {
+          var removeAncestor = ancestorWithClass;
           ancestorWithClass = splitNodeAt(ancestorWithClass, range.startContainer, range.startOffset);
+          // Remove element if empty
+          var content = removeAncestor.innerHTML || removeAncestor.data;
+          if(content && content.trim().length <= 0) {
+            range.collapseAfter(removeAncestor);
+            removeAncestor.remove();
+          }
         }
       }
       
-      if (this.similarClassRegExp) {
-        removeClass(ancestorWithClass, this.similarClassRegExp);
-      }
       if (this.isRemovable(ancestorWithClass)) {
         replaceWithOwnChildren(ancestorWithClass);
-      }
-      
-      // Remove element if empty
-      var content = ancestorWithClass.innerHTML || ancestorWithClass.data;
-      if(content && content.trim().length <= 0) {
-        range.collapseAfter(ancestorWithClass);
-        ancestorWithClass.remove();
       }
     },
 
