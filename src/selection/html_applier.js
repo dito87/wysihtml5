@@ -35,8 +35,20 @@
     }
   }
   
+  function getClasses(el) {
+    if(el === undefined) {
+      return [];
+    }
+    var element = getElementForTextNode(el);
+    return element.classList;
+  }
+  
   function hasSameClasses(el1, el2) {
     return el1.className.replace(REG_EXP_WHITE_SPACE, " ") == el2.className.replace(REG_EXP_WHITE_SPACE, " ");
+  }
+  
+  function getElementForTextNode(el) {
+    return el.nodeType === wysihtml5.ELEMENT_NODE ? el : el.parentElement;
   }
 
   function replaceWithOwnChildren(el) {
@@ -252,11 +264,18 @@
         && elementsHaveSameNonClassAttributes(el1, el2);
     },
 
-    createContainer: function(doc) {
-      var el = doc.createElement(this.tagNames[0]);
+    createContainer: function(doc, ancestor) {
+      var 
+        el = doc.createElement(this.tagNames[0]),
+        parentClasses = getClasses(ancestor);
       if (this.cssClass) {
         el.className = this.cssClass;
       }
+      
+      for(var i = 0; i < parentClasses.length; i++) {
+        el.classList.add(parentClasses[i]);
+      }
+      
       return el;
     },
 
@@ -278,7 +297,7 @@
         isContaining = rangy.dom.arrayContains(this.tagNames, el.tagName.toLowerCase()),
         isSameClass = wysihtml5.lang.string(el.className).trim() === this.cssClass;
 
-      return this.similarClassRegExp || (isContaining && isSameClass);
+      return isContaining && isSameClass;
     },
 
     undoToTextNode: function(textNode, range, ancestorWithClass) {
@@ -303,6 +322,9 @@
         }
       }
       
+      var el = getElementForTextNode(textNode);
+      el.classList.remove(this.cssClass);
+      
       if (this.isRemovable(ancestorWithClass)) {
         replaceWithOwnChildren(ancestorWithClass);
       }
@@ -312,7 +334,8 @@
         var textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
         if (!textNodes.length) {
           try {
-            var node = this.createContainer(range.endContainer.ownerDocument);
+            var node = this.createContainer(range.endContainer.ownerDocument, range.commonAncestorContainer);
+            range.collapseAfter(getElementForTextNode(range.commonAncestorContainer));
             range.surroundContents(node);
             this.selectNode(range, node);
             return;
