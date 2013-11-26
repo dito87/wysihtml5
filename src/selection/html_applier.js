@@ -36,7 +36,7 @@
   }
   
   function getClasses(el) {
-    if(el === undefined) {
+    if(!el) {
       return [];
     }
     var element = getElementForTextNode(el);
@@ -118,6 +118,54 @@
       rangy.dom.insertAfter(newNode, descendantNode);
     }
     return (descendantNode == node) ? newNode : splitNodeAt(node, newNode.parentNode, rangy.dom.getNodeIndex(newNode));
+  }
+  
+  function splitBoundaries(range) {
+    range.splitBoundaries();
+
+    var nodes = range.getNodes([wysihtml5.TEXT_NODE]);
+
+    for(var i = 0; i < nodes.length; i++) {
+      var 
+        parent = nodes[i].parentElement,
+        node = createNode(parent, nodes[i].data);
+
+      insertBefore(parent, node);
+
+      if(nodes[i].previousSibling !== null) {
+        var prev = createNode(parent, nodes[i].previousSibling.data);
+        insertBefore(node, prev);
+      }
+
+      if(nodes[i].nextSibling !== null) {
+        var next = createNode(parent, nodes[i].nextSibling.data);
+        insertAfter(node, next);
+      }
+
+      parent.remove();
+
+      if(i === 0) {
+        range.setStartBefore(node);
+      }
+
+      if(i === nodes.length - 1) {
+        range.setEndAfter(node);
+      }
+    }
+
+    function createNode(parent, text) {
+      var el = parent.cloneNode();
+      el.innerHTML = text;
+      return el;
+    }
+
+    function insertBefore(ref, node) {
+      ref.parentElement.insertBefore(node, ref);
+    }
+
+    function insertAfter(ref, node) {
+      ref.parentElement.insertBefore(node, ref.nextSibling);
+    }
   }
 
   function Merge(firstNode) {
@@ -286,7 +334,7 @@
           addClass(parent, this.cssClass, this.similarClassRegExp);
         }
       } else {
-        var el = this.createContainer(rangy.dom.getDocument(textNode));
+        var el = this.createContainer(rangy.dom.getDocument(textNode), this.getAncestorWithClass(textNode));
         textNode.parentNode.insertBefore(el, textNode);
         el.appendChild(textNode);
       }
@@ -342,7 +390,7 @@
           } catch(e) {}
         }
         
-        range.splitBoundaries();
+        splitBoundaries(range);
         textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
         
         if (textNodes.length) {
