@@ -44,7 +44,18 @@
   }
   
   function hasSameClasses(el1, el2) {
-    return el1.className.replace(REG_EXP_WHITE_SPACE, " ") == el2.className.replace(REG_EXP_WHITE_SPACE, " ");
+    if(el1.classList.length !== el2.classList.length) {
+      return false;
+    }
+    
+    for(var i = 0; i < el1.classList.length; i++) {
+      if(!el2.classList.contains(el1.classList[i])) {
+        return false;
+      }
+    }
+    
+    return true;
+    //return el1.className.replace(REG_EXP_WHITE_SPACE, " ") == el2.className.replace(REG_EXP_WHITE_SPACE, " ");
   }
   
   function getElementForTextNode(el) {
@@ -132,12 +143,12 @@
 
       insertBefore(parent, node);
 
-      if(nodes[i].previousSibling !== null) {
+      if(nodes[i].previousSibling !== null && nodes[i].previousSibling.data !== undefined) {
         var prev = createNode(parent, nodes[i].previousSibling.data);
         insertBefore(node, prev);
       }
 
-      if(nodes[i].nextSibling !== null) {
+      if(nodes[i].nextSibling !== null && nodes[i].nextSibling.data !== undefined) {
         var next = createNode(parent, nodes[i].nextSibling.data);
         insertAfter(node, next);
       }
@@ -166,6 +177,37 @@
     function insertAfter(ref, node) {
       ref.parentElement.insertBefore(node, ref.nextSibling);
     }
+  }
+  
+  function mergeBoundaries(range) {
+    var 
+      startAncestor = getElementForTextNode(range.startContainer),
+      endAncestor = getElementForTextNode(range.endContainer),
+      start = range.startOffset,
+      end = range.endOffset;
+    
+    if(startAncestor.previousSibling !== null) {
+      var prev = startAncestor.previousSibling;
+            
+      if(hasSameClasses(startAncestor, prev)) {
+        startAncestor.innerHTML = prev.innerHTML + startAncestor.innerHTML;
+        start = prev.innerHTML.length;
+        end = end + start;
+        prev.remove();
+      }
+    }
+    
+    if(endAncestor.nextSibling !== null) {
+      var next = endAncestor.nextSibling;
+      
+      if(hasSameClasses(endAncestor, next)) {
+        endAncestor.innerHTML = endAncestor.innerHTML + next.innerHTML;
+        next.remove();
+      }
+    }
+
+    range.setStart(startAncestor.firstChild, start);
+    range.setEnd(endAncestor.firstChild, end);
   }
 
   function Merge(firstNode) {
@@ -445,6 +487,8 @@
           this.postApply(textNodes, range);
         }
       }
+      
+      mergeBoundaries(range);
     },
     
     selectNode: function(range, node) {
