@@ -59,7 +59,7 @@
   }
   
   function getElementForTextNode(el) {
-    return el.nodeType === wysihtml5.ELEMENT_NODE ? el : el.parentElement;
+    return el.nodeType === wysihtml5.ELEMENT_NODE ? el : el.parentNode;
   }
 
   function replaceWithOwnChildren(el) {
@@ -68,6 +68,10 @@
       parent.insertBefore(el.firstChild, el);
     }
     parent.removeChild(el);
+  }
+  
+  function remove(el) {
+    el.parentNode.removeChild(el);
   }
 
   function elementsHaveSameNonClassAttributes(el1, el2) {
@@ -138,7 +142,7 @@
 
     for(var i = 0; i < nodes.length; i++) {
       var 
-        parent = nodes[i].parentElement,
+        parent = nodes[i].parentNode,
         node = createNode(parent, nodes[i].data);
 
       insertBefore(parent, node);
@@ -153,7 +157,7 @@
         insertAfter(node, next);
       }
 
-      parent.remove();
+      remove(parent);
 
       if(i === 0) {
         range.setStartBefore(node);
@@ -171,11 +175,11 @@
     }
 
     function insertBefore(ref, node) {
-      ref.parentElement.insertBefore(node, ref);
+      ref.parentNode.insertBefore(node, ref);
     }
 
     function insertAfter(ref, node) {
-      ref.parentElement.insertBefore(node, ref.nextSibling);
+      ref.parentNode.insertBefore(node, ref.nextSibling);
     }
   }
   
@@ -193,7 +197,7 @@
         startAncestor.innerHTML = prev.innerHTML + startAncestor.innerHTML;
         start = prev.innerHTML.length;
         end = end + start;
-        prev.remove();
+        remove(prev);
       }
     }
     
@@ -202,7 +206,7 @@
       
       if(hasSameClasses(endAncestor, next)) {
         endAncestor.innerHTML = endAncestor.innerHTML + next.innerHTML;
-        next.remove();
+        remove(next);
       }
     }
 
@@ -407,7 +411,7 @@
           var content = removeAncestor.innerHTML || removeAncestor.data;
           if(content && content.trim().length <= 0) {
             range.collapseAfter(removeAncestor);
-            removeAncestor.remove();
+            remove(removeAncestor);
           }
         }
       }
