@@ -367,7 +367,9 @@
       }
       
       for(var i = 0; i < parentClasses.length; i++) {
-        el.classList.add(parentClasses[i]);
+        if(!parentClasses[i].match(this.similarClassRegExp)) {
+          el.classList.add(parentClasses[i]);
+        }
       }
       
       return el;
