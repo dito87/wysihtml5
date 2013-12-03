@@ -354,6 +354,10 @@ wysihtml5.browser = (function() {
      */
     createsNestedInvalidMarkupAfterPaste: function() {
       return isWebKit;
+    },
+    
+    keepsSelectionOnBlur: function() {
+      return !isIE;
     }
   };
 })();
