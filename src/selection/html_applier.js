@@ -550,7 +550,6 @@
     },
 
     toggleRange: function(range) {
-      console.log("this", this); debugger;
       if (this.isAppliedToRange(range) && this.toggable) {
         this.undoToRange(range);
       } else {
