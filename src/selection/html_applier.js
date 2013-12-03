@@ -255,12 +255,13 @@
     }
   };
 
-  function HTMLApplier(tagNames, cssClass, similarClassRegExp, normalize) {
+  function HTMLApplier(tagNames, cssClass, similarClassRegExp, normalize, toggable) {
     this.tagNames = tagNames || [defaultTagName];
     this.cssClass = cssClass || "";
     this.similarClassRegExp = similarClassRegExp;
     this.normalize = normalize;
     this.applyToAnyTagName = false;
+    this.toggable = toggable || true;
   }
 
   HTMLApplier.prototype = {
@@ -549,7 +550,8 @@
     },
 
     toggleRange: function(range) {
-      if (this.isAppliedToRange(range)) {
+      console.log("this", this); debugger;
+      if (this.isAppliedToRange(range) && this.toggable) {
         this.undoToRange(range);
       } else {
         this.applyToRange(range);

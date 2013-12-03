@@ -46,21 +46,21 @@
     return alias ? [tagName.toLowerCase(), alias.toLowerCase()] : [tagName.toLowerCase()];
   }
   
-  function _getApplier(tagName, className, classRegExp) {
+  function _getApplier(tagName, className, classRegExp, toggable) {
     var identifier = tagName + ":" + className;
     if (!htmlApplier[identifier]) {
-      htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier(_getTagNames(tagName), className, classRegExp, true);
+      htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier(_getTagNames(tagName), className, classRegExp, true, toggable);
     }
     return htmlApplier[identifier];
   }
   
   wysihtml5.commands.formatInline = {
-    exec: function(composer, command, tagName, className, classRegExp) {
+    exec: function(composer, command, tagName, className, classRegExp, toggable) {
       var range = composer.selection.getRange();
       if (!range) {
         return false;
       }
-      _getApplier(tagName, className, classRegExp).toggleRange(range);
+      _getApplier(tagName, className, classRegExp, toggable).toggleRange(range);
       composer.selection.setSelection(range);
     },
 
