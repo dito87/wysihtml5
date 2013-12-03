@@ -261,7 +261,7 @@
     this.similarClassRegExp = similarClassRegExp;
     this.normalize = normalize;
     this.applyToAnyTagName = false;
-    this.toggable = toggable || true;
+    this.toggable = toggable === undefined ? true : toggable;
   }
 
   HTMLApplier.prototype = {
