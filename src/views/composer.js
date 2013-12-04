@@ -344,15 +344,13 @@
             var paragraph = that.doc.createElement("P");
             that.element.innerHTML = "";
             that.element.appendChild(paragraph);
-            /*
+            
             if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
               paragraph.innerHTML = "<br>";
               that.selection.setBefore(paragraph.firstChild);
             } else {
               that.selection.selectNode(paragraph, true);
-            }*/
-            
-            that.selection.selectNode(paragraph, true);
+            }
           }
         });
       }
