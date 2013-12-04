@@ -337,23 +337,42 @@
           });
         }
       }
-      
+           
       if (!this.config.useLineBreaks) {
         dom.observe(this.element, ["focus", "keydown"], function() {
           if (that.isEmpty()) {
             var paragraph = that.doc.createElement("P");
             that.element.innerHTML = "";
             that.element.appendChild(paragraph);
-            
-            if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
-              paragraph.innerHTML = "<br>";
-              that.selection.setBefore(paragraph.firstChild);
-            } else {
-              that.selection.selectNode(paragraph, true);
-            }
+            //that.selection.selectNode(paragraph, true);
           }
         });
       }
+      
+      // Ensure text is wrapped in span 
+      dom.observe(this.element, ["focus", "keydown"], function(){
+        if(that.isEmpty()) {
+          var 
+            node = that.element.firstChild ? 
+              (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
+              : that.element,
+            span = that.doc.createElement("SPAN"),
+            className = that.config.defaultClassNames['span'];
+
+          if(className !== undefined) {
+            span.className = className;
+          }
+
+          node.appendChild(span);
+          
+          if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
+            span.innerHTML = "<br>";
+            that.selection.setBefore(span.firstChild);
+          } else {
+            that.selection.selectNode(span, true);
+          }
+        }
+      });
       
       // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
       // Inserting an invisible white space in front of it fixes the issue
@@ -370,21 +389,6 @@
         
         if (event.shiftKey) {
           return;
-        }
-        
-        // Ensure text is wrapped in span
-        var selectedNode = that.selection.getSelectedNode();
-        if(that.isEmpty() && selectedNode.nodeName === "P") {
-          var 
-            span = that.doc.createElement("SPAN"),
-            className = that.config.defaultClassNames['span'];
-          
-          if(className !== undefined) {
-            span.className = className;
-          }
-          
-          selectedNode.appendChild(span);
-          that.selection.selectNode(span);
         }
         
         if (keyCode !== wysihtml5.ENTER_KEY && keyCode !== wysihtml5.BACKSPACE_KEY) {
