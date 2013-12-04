@@ -377,7 +377,14 @@
         // Ensure text is wrapped in span
         var selectedNode = that.selection.getSelectedNode();
         if(that.isEmpty() && selectedNode.nodeName === "P") {
-          var span = that.doc.createElement("SPAN");
+          var 
+            span = that.doc.createElement("SPAN"),
+            className = that.config.defaultClassNames['span'];
+          
+          if(className !== undefined) {
+            span.className = className;
+          }
+          
           selectedNode.appendChild(span);
           that.selection.selectNode(span);
         }

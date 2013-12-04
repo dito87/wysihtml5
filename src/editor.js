@@ -59,7 +59,9 @@
     // Whether the rich text editor should be rendered on touch devices (wysihtml5 >= 0.3.0 comes with basic support for iOS 5)
     supportTouchDevices:  true,
     // Whether senseless <span> elements (empty or without attributes) should be removed/replaced with their content
-    cleanUp:              true
+    cleanUp:              true,
+    // default css class to apply to new elements, elements: class string pairs
+    defaultClassNames: {}
   };
   
   wysihtml5.Editor = wysihtml5.lang.Dispatcher.extend(
