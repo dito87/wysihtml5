@@ -136,35 +136,44 @@
   }
   
   function splitBoundaries(range) {
-    range.splitBoundaries();
+    if(range.collapsed) {
+      var
+        textNode = range.commonAncestorContainer,
+        parent = textNode.parentNode;
 
-    var nodes = range.getNodes([wysihtml5.TEXT_NODE]);
+      var newNode = splitNodeAt(parent, textNode, range.startOffset);
+      range.collapseBefore(newNode);
+      return;
+    } else {
+      range.splitBoundaries();
+      var nodes = range.getNodes([wysihtml5.TEXT_NODE]);
+      
+      for(var i = 0; i < nodes.length; i++) {
+        var 
+          parent = nodes[i].parentNode,
+          node = createNode(parent, nodes[i].data);
 
-    for(var i = 0; i < nodes.length; i++) {
-      var 
-        parent = nodes[i].parentNode,
-        node = createNode(parent, nodes[i].data);
+        insertBefore(parent, node);
 
-      insertBefore(parent, node);
+        if(nodes[i].previousSibling !== null && nodes[i].previousSibling.data !== undefined) {
+          var prev = createNode(parent, nodes[i].previousSibling.data);
+          insertBefore(node, prev);
+        }
 
-      if(nodes[i].previousSibling !== null && nodes[i].previousSibling.data !== undefined) {
-        var prev = createNode(parent, nodes[i].previousSibling.data);
-        insertBefore(node, prev);
-      }
+        if(nodes[i].nextSibling !== null && nodes[i].nextSibling.data !== undefined) {
+          var next = createNode(parent, nodes[i].nextSibling.data);
+          insertAfter(node, next);
+        }
 
-      if(nodes[i].nextSibling !== null && nodes[i].nextSibling.data !== undefined) {
-        var next = createNode(parent, nodes[i].nextSibling.data);
-        insertAfter(node, next);
-      }
+        remove(parent);
 
-      remove(parent);
+        if(i === 0) {
+          range.setStartBefore(node);
+        }
 
-      if(i === 0) {
-        range.setStartBefore(node);
-      }
-
-      if(i === nodes.length - 1) {
-        range.setEndAfter(node);
+        if(i === nodes.length - 1) {
+          range.setEndAfter(node);
+        }
       }
     }
 
@@ -439,7 +448,7 @@
               return;
             }
           
-            range.collapseAfter(ancestor);
+            splitBoundaries(range);
             range.surroundContents(node);
             this.selectNode(range, node);
             return;
@@ -448,7 +457,6 @@
         
         splitBoundaries(range);
         textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
-        
         if (textNodes.length) {
           var textNode;
 
