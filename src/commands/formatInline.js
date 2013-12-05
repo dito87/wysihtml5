@@ -47,7 +47,8 @@
   }
   
   function _getApplier(tagName, className, classRegExp, toggable) {
-    var identifier = tagName + ":" + className;
+    var isToggable = toggable === undefined ? true : toggable;
+    var identifier = tagName + ":" + className + ":" + isToggable.toString();
     if (!htmlApplier[identifier]) {
       htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier(_getTagNames(tagName), className, classRegExp, true, toggable);
     }

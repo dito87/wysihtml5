@@ -431,8 +431,15 @@
         var textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
         if (!textNodes.length) {
           try {
-            var node = this.createContainer(range.endContainer.ownerDocument, range.commonAncestorContainer);
-            range.collapseAfter(getElementForTextNode(range.commonAncestorContainer));
+            var 
+              ancestor = getElementForTextNode(range.commonAncestorContainer),
+              node = this.createContainer(range.endContainer.ownerDocument, range.commonAncestorContainer);
+            
+            if(hasSameClasses(ancestor, node)) {
+              return;
+            }
+          
+            range.collapseAfter(ancestor);
             range.surroundContents(node);
             this.selectNode(range, node);
             return;
