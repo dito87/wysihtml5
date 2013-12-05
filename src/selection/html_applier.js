@@ -153,6 +153,12 @@
           parent = nodes[i].parentNode,
           node = createNode(parent, nodes[i].data);
 
+        // Remove orphaned nodes
+        if(parent.parentNode === null) {
+          remove(nodes[i]);
+          continue;
+        }
+        
         insertBefore(parent, node);
 
         if(nodes[i].previousSibling !== null && nodes[i].previousSibling.data !== undefined) {
