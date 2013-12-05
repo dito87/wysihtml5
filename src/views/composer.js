@@ -368,6 +368,11 @@
           if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
             span.innerHTML = "<br>";
             that.selection.setBefore(span.firstChild);
+            if(browser.hasProblemsSettingCaretInEmptyElement) {
+              setTimeout(function() { that.selection.setBefore(span.firstChild); }, 0);
+            } else {
+              that.selection.setBefore(span.firstChild);
+            }
           } else {
             that.selection.selectNode(span, true);
           }

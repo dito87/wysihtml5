@@ -358,6 +358,13 @@ wysihtml5.browser = (function() {
     
     keepsSelectionOnBlur: function() {
       return !isIE;
+    },
+    
+    /**
+     * Firefox displays the caret after the element if it is empty.
+     */
+    hasProblemsSettingCaretInEmptyElement: function() {
+      return isGecko;
     }
   };
 })();
