@@ -189,15 +189,16 @@
       var restoreSelection;
       dom.observe(element, "beforedeactivate", function(event) {
         restoreSelection = rangy.saveSelection(that.iframe.contentWindow);
-      });
-
-      dom.observe(element, "activate", function(event) {
-
+        
+        setTimeout(function() {
         if(restoreSelection !== undefined) {
           rangy.restoreSelection(restoreSelection);
           restoreSelection = undefined;
         }
+      }, 20);
       });
+
+      
     }
   };
   
