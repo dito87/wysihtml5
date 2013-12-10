@@ -146,8 +146,7 @@
       return;
     } else {
       range.splitBoundaries();
-      var nodes = range.getNodes([wysihtml5.TEXT_NODE]);
-      
+      var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));      
       for(var i = 0; i < nodes.length; i++) {
         var 
           parent = nodes[i].parentNode,
@@ -172,14 +171,14 @@
         }
 
         remove(parent);
-
+        
         if(i === 0) {
           range.setStartBefore(node);
         }
 
         if(i === nodes.length - 1) {
           range.setEndAfter(node);
-        }
+        }   
       }
     }
 
@@ -198,36 +197,15 @@
     }
   }
   
-  function mergeBoundaries(range) {
-    var 
-      startAncestor = getElementForTextNode(range.startContainer),
-      endAncestor = getElementForTextNode(range.endContainer),
-      start = range.startOffset,
-      end = range.endOffset;
-    
-    if(startAncestor.previousSibling !== null) {
-      var prev = startAncestor.previousSibling;
-            
-      if(hasSameClasses(startAncestor, prev)) {
-        startAncestor.innerHTML = prev.innerHTML + startAncestor.innerHTML;
-        start = prev.innerHTML.length;
-        end = end + start;
-        remove(prev);
-      }
-    }
-    
-    if(endAncestor.nextSibling !== null) {
-      var next = endAncestor.nextSibling;
-      
-      if(hasSameClasses(endAncestor, next)) {
-        endAncestor.innerHTML = endAncestor.innerHTML + next.innerHTML;
-        remove(next);
-      }
-    }
-
-    range.setStart(startAncestor.firstChild, start);
-    range.setEnd(endAncestor.firstChild, end);
-  }
+  function removeUnselectedBoundaryTextNodes(range, textNodes) {
+     if(!range.collapsed && range.startOffset === textNodes[0].length) {
+       textNodes.splice(0,1);
+     }
+     if(!range.collapsed && range.endOffset === 0) {
+       textNodes.splice(textNodes.length - 1, 1);
+     }
+     return textNodes;
+   }
 
   function Merge(firstNode) {
     this.isElementMerge = (firstNode.nodeType == wysihtml5.ELEMENT_NODE);
@@ -299,7 +277,7 @@
       var merges = [], currentMerge;
 
       var rangeStartNode = firstNode, rangeEndNode = lastNode;
-      var rangeStartOffset = 0, rangeEndOffset = lastNode.length;
+      var rangeStartOffset = range.startOffset, rangeEndOffset = lastNode.length;
 
       var textNode, precedingTextNode;
 
@@ -324,7 +302,7 @@
           currentMerge = null;
         }
       }
-
+      
       // Test whether the first node after the range needs merging
       var nextTextNode = this.getAdjacentMergeableTextNode(lastNode.parentNode, true);
       if (nextTextNode) {
@@ -340,7 +318,7 @@
         for (i = 0, len = merges.length; i < len; ++i) {
           merges[i].doMerge();
         }
-        // Set the range boundaries
+      // Set the range boundaries
         range.setStart(rangeStartNode, rangeStartOffset);
         range.setEnd(rangeEndNode, rangeEndOffset);
       }
@@ -465,6 +443,8 @@
         textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
         if (textNodes.length) {
           var textNode;
+          
+          //textNodes = removeUnselectedBoundaryTextNodes(range, textNodes);
 
           for (var i = 0, len = textNodes.length; i < len; ++i) {
             textNode = textNodes[i];
@@ -485,9 +465,10 @@
 
     undoToRange: function(range) {
       var textNodes = range.getNodes([wysihtml5.TEXT_NODE]), textNode, ancestorWithClass;
+
       if (textNodes.length) {
-        range.splitBoundaries();
-        textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
+        splitBoundaries(range);
+        textNodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));
       } else {
         var doc = range.endContainer.ownerDocument,
             node = doc.createTextNode(wysihtml5.INVISIBLE_SPACE);
@@ -504,19 +485,9 @@
         }
       }
       
-      if (len == 1) {
-        this.selectNode(range, textNodes[0]);
-      } else {
-        range.setStart(textNodes[0], 0);
-        textNode = textNodes[textNodes.length - 1];
-        range.setEnd(textNode, textNode.length);
-
-        if (this.normalize) {
-          this.postApply(textNodes, range);
-        }
+      if (this.normalize) {
+        this.postApply(textNodes, range);
       }
-      
-      mergeBoundaries(range);
     },
     
     selectNode: function(range, node) {
