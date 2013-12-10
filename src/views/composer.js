@@ -368,16 +368,28 @@
           if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
             span.innerHTML = "<br>";
             that.selection.setBefore(span.firstChild);
-            if(browser.hasProblemsSettingCaretInEmptyElement) {
-              setTimeout(function() { that.selection.setBefore(span.firstChild); }, 0);
-            } else {
-              that.selection.setBefore(span.firstChild);
-            }
           } else {
             that.selection.selectNode(span, true);
           }
         }
       });
+      
+      // Fix caret positioning
+      if(browser.hasProblemsPositioningCaret()) {
+        dom.observe(this.element, "focus", function() {
+          var lastChild = that.doc;
+
+          while(lastChild.lastChild!== null) {
+            lastChild = lastChild.lastChild;
+          }
+
+          setTimeout(function() { 
+            lastChild.nodeName === "BR"
+              ? that.selection.setBefore(lastChild)
+              : that.selection.setAfter(lastChild); 
+          }, 0);
+        });
+      }
       
       // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
       // Inserting an invisible white space in front of it fixes the issue

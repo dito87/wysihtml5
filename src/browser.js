@@ -362,9 +362,10 @@ wysihtml5.browser = (function() {
     
     /**
      * Firefox displays the caret after the element if it is empty.
+     * IE positions caret outside span tags if span is not empty
      */
-    hasProblemsSettingCaretInEmptyElement: function() {
-      return isGecko;
+    hasProblemsPositioningCaret: function() {
+      return isGecko || isIE;
     }
   };
 })();
