@@ -356,9 +356,9 @@
           });
         }
       }
-           
+      
       if (!this.config.useLineBreaks) {
-        dom.observe(this.element, ["focus", "keydown"], function() {
+        dom.observe(this.element, ["focus", "keydown", "keyup"], function() {
           if (that.isEmpty()) {
             var paragraph = that.doc.createElement("P");
             that.element.innerHTML = "";
@@ -369,7 +369,8 @@
       }
       
       // Ensure text is wrapped in span 
-      dom.observe(this.element, ["focus", "keydown"], function(){
+      dom.observe(this.element, ["focus", "keydown", "keyup"], function(){
+        //console.log("dbg", that.isEmpty(), that.selection.getRange());
         if(that.isEmpty()) {
           var 
             node = that.element.firstChild ? 
@@ -382,8 +383,10 @@
             span.className = className;
           }
 
+          //console.log("node", node);
+          node.innerHTML = "";
           node.appendChild(span);
-          
+
           if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
             span.innerHTML = "<br>";
             that.selection.setBefore(span.firstChild);
@@ -392,7 +395,7 @@
           }
         }
       });
-           
+        
       // Under cergeneratetain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
       // Inserting an invisible white space in front of it fixes the issue
       if (browser.createsNestedInvalidMarkupAfterPaste()) {

@@ -137,11 +137,19 @@
   
   function splitBoundaries(range) {
     if(range.collapsed) {
-      var
-        textNode = range.commonAncestorContainer,
-        parent = textNode.parentNode;
-
-      var newNode = splitNodeAt(parent, textNode, range.startOffset);
+      var textNode = range.startContainer;
+      if(textNode.nodeType !== wysihtml5.TEXT_NODE) {
+        textNode.innerHTML = "";
+        textNode.appendChild(
+          range.getDocument().createTextNode(wysihtml5.INVISIBLE_SPACE)
+        );
+        textNode = textNode.firstChild;
+      }
+      
+      var 
+        parent = textNode.parentNode,
+        newNode = splitNodeAt(parent, textNode, range.startOffset);
+      
       range.collapseBefore(newNode);
       return;
     } else {
@@ -434,6 +442,20 @@
                       
             splitBoundaries(range);
             range.surroundContents(node);
+
+            // remove empty siblings (if any)
+            var toRemove = ["previousSibling", "nextSibling"];
+            for(var i = 0; i < toRemove.length; i++) {
+              if(node[toRemove[i]] === null) {
+                continue;
+              }
+              
+              var n = node[toRemove[i]];
+              if(n.innerHTML === "" || n.innerHTML === "<br>" || n.innerHTML === wysihtml5.INVISIBLE_SPACE) {
+                remove(n);
+              }
+            }
+
             this.selectNode(range, node);    
             return;
           } catch(e) {}
