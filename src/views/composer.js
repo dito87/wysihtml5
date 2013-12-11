@@ -122,6 +122,7 @@
              innerHTML === "<br>"        ||
              innerHTML === "<p></p>"     ||
              innerHTML === "<p><br></p>" ||
+             innerHTML === wysihtml5.INVISIBLE_SPACE ||
              this.hasPlaceholderSet();
     },
 
@@ -370,7 +371,7 @@
       
       // Ensure text is wrapped in span 
       dom.observe(this.element, ["focus", "keydown", "keyup"], function(){
-        //console.log("dbg", that.isEmpty(), that.selection.getRange());
+        console.log("dbg", that.isEmpty(), that.selection.getRange());
         if(that.isEmpty()) {
           var 
             node = that.element.firstChild ? 
@@ -383,7 +384,7 @@
             span.className = className;
           }
 
-          //console.log("node", node);
+          console.log("node", node);
           node.innerHTML = "";
           node.appendChild(span);
 
