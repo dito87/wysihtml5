@@ -78,13 +78,32 @@
       }
       
       this.base();
+      var self = this;
       
-      var lastChild = this.element.lastChild;
-      if (setToEnd && lastChild) {
-        if (lastChild.nodeName === "BR") {
-          this.selection.setBefore(this.element.lastChild);
-        } else {
-          this.selection.setAfter(this.element.lastChild);
+      
+      if (wysihtml5.browser.doesAsyncFocus()) {
+        setTimeout(doFocus, 0);
+      }
+      else {
+        doFocus();
+      }
+      
+      function doFocus() {
+        var lastChild = self.element;
+        while(lastChild.lastChild!== null) {
+          lastChild = lastChild.lastChild;
+        }
+
+        if (setToEnd && lastChild) {
+          if (lastChild.nodeName === "BR") {
+            self.selection.setBefore(lastChild);
+          }
+          else if(lastChild.nodeName === "SPAN") {
+            self.selection.selectNode(lastChild);
+          } 
+          else {
+            self.selection.setAfter(lastChild);
+          }
         }
       }
     },
@@ -373,25 +392,8 @@
           }
         }
       });
-      
-      // Fix caret positioning
-      if(browser.hasProblemsPositioningCaret()) {
-        dom.observe(this.element, "focus", function() {
-          var lastChild = that.doc;
-
-          while(lastChild.lastChild!== null) {
-            lastChild = lastChild.lastChild;
-          }
-
-          setTimeout(function() { 
-            lastChild.nodeName === "BR"
-              ? that.selection.setBefore(lastChild)
-              : that.selection.setAfter(lastChild); 
-          }, 0);
-        });
-      }
-      
-      // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
+           
+      // Under cergeneratetain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
       // Inserting an invisible white space in front of it fixes the issue
       if (browser.createsNestedInvalidMarkupAfterPaste()) {
         dom.observe(this.element, "paste", function(event) {

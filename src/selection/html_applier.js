@@ -431,10 +431,10 @@
             if(hasSameClasses(ancestor, node)) {
               return;
             }
-          
+                      
             splitBoundaries(range);
             range.surroundContents(node);
-            this.selectNode(range, node);
+            this.selectNode(range, node);    
             return;
           } catch(e) {}
         }
