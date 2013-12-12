@@ -358,21 +358,25 @@
         }
       }
       
-      if (!this.config.useLineBreaks) {
-        dom.observe(this.element, ["focus", "keydown", "keyup"], function() {
-          if (that.isEmpty()) {
+      // Ensure text is wrapped in span 
+      dom.observe(this.element, ["focus", "keydown", "keyup"], function(event){
+        // ignore keyup event except for delete and backspace
+        if(event.type === "keyup" && (event.keyCode !== wysihtml5.DELETE_KEY && event.keyCode !== wysihtml5.BACKSPACE_KEY)) {
+          return;
+        }
+        
+        var 
+          range = that.selection.getRange(),
+          isRemoveAll = that.element === range.startContainer && that.element === range.endContainer; // is everything selected
+                  
+        if(that.isEmpty() || isRemoveAll) {
+          if (!that.config.useLineBreaks) {
             var paragraph = that.doc.createElement("P");
             that.element.innerHTML = "";
             that.element.appendChild(paragraph);
             //that.selection.selectNode(paragraph, true);
           }
-        });
-      }
-      
-      // Ensure text is wrapped in span 
-      dom.observe(this.element, ["focus", "keydown", "keyup"], function(){
-        console.log("dbg", that.isEmpty(), that.selection.getRange());
-        if(that.isEmpty()) {
+          
           var 
             node = that.element.firstChild ? 
               (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
@@ -384,7 +388,7 @@
             span.className = className;
           }
 
-          console.log("node", node);
+          //console.log("node", node);
           node.innerHTML = "";
           node.appendChild(span);
 
@@ -397,7 +401,7 @@
         }
       });
         
-      // Under cergeneratetain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
+      // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
       // Inserting an invisible white space in front of it fixes the issue
       if (browser.createsNestedInvalidMarkupAfterPaste()) {
         dom.observe(this.element, "paste", function(event) {
