@@ -367,7 +367,10 @@
         
         var 
           range = that.selection.getRange(),
-          isRemoveAll = that.element === range.startContainer && that.element === range.endContainer; // is everything selected
+          isRemoveAll = // is everything selected
+            event.type !== "focus" &&
+            that.element === range.startContainer && 
+            that.element === range.endContainer; 
                   
         if(that.isEmpty() || isRemoveAll) {
           if (!that.config.useLineBreaks) {
