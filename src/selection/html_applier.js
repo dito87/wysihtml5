@@ -482,7 +482,6 @@
           ancestor.classList.remove(this.cssClass);
           ancestor.innerHTML = "";
           ancestor.appendChild(node);
-          range.selectNode(ancestor);
         }
         else {
           // collapsed, element is not empty
