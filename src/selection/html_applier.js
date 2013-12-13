@@ -398,36 +398,6 @@
       return isContaining && isSameClass;
     },
 
-    undoToTextNode: function(textNode, range, ancestorWithClass) {
-      if (!range.containsNode(ancestorWithClass)) {
-        // Split out the portion of the ancestor from which we can remove the CSS class
-        var ancestorRange = range.cloneRange();
-        ancestorRange.selectNode(ancestorWithClass);
-
-        if (ancestorRange.isPointInRange(range.endContainer, range.endOffset) && isSplitPoint(range.endContainer, range.endOffset)) {
-          splitNodeAt(ancestorWithClass, range.endContainer, range.endOffset);
-          range.setEndAfter(ancestorWithClass);
-        }
-        if (ancestorRange.isPointInRange(range.startContainer, range.startOffset) && isSplitPoint(range.startContainer, range.startOffset)) {
-          var removeAncestor = ancestorWithClass;
-          ancestorWithClass = splitNodeAt(ancestorWithClass, range.startContainer, range.startOffset);
-          // Remove element if empty
-          var content = removeAncestor.innerHTML || removeAncestor.data;
-          if(content && content.trim().length <= 0) {
-            range.collapseAfter(removeAncestor);
-            remove(removeAncestor);
-          }
-        }
-      }
-      
-      var el = getElementForTextNode(textNode);
-      el.classList.remove(this.cssClass);
-      
-      if (this.isRemovable(ancestorWithClass)) {
-        replaceWithOwnChildren(ancestorWithClass);
-      }
-    },
-
     applyToRange: function(range) {
         var textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
         if (!textNodes.length) {
@@ -491,19 +461,41 @@
       if (textNodes.length) {
         splitBoundaries(range);
         textNodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));
-      } else {
+        
+        for (var i = 0, len = textNodes.length; i < len; ++i) {
+          textNode = textNodes[i];
+          ancestorWithClass = this.getAncestorWithClass(textNode);
+          if (ancestorWithClass) {
+            ancestorWithClass.classList.remove(this.cssClass);
+          }
+        }
+      } 
+      else {
         var doc = range.endContainer.ownerDocument,
-            node = doc.createTextNode(wysihtml5.INVISIBLE_SPACE);
-        range.insertNode(node);
-        range.selectNode(node);
+            node = doc.createTextNode(wysihtml5.INVISIBLE_SPACE),
+            ancestor = range.commonAncestorContainer;
+    
         textNodes = [node];
-      }
-      
-      for (var i = 0, len = textNodes.length; i < len; ++i) {
-        textNode = textNodes[i];
-        ancestorWithClass = this.getAncestorWithClass(textNode);
-        if (ancestorWithClass) {
-          this.undoToTextNode(textNode, range, ancestorWithClass);
+        
+        if(ancestor.nodeType === wysihtml5.ELEMENT_NODE) {
+          // collapsed, element is empty
+          ancestor.classList.remove(this.cssClass);
+          ancestor.innerHTML = "";
+          ancestor.appendChild(node);
+          range.selectNode(ancestor);
+        }
+        else {
+          // collapsed, element is not empty
+          var 
+            ancestorWithClass = this.getAncestorWithClass(ancestor),
+            ancestorClone = ancestorWithClass.cloneNode();
+          ancestorClone.innerHTML = "";
+          ancestorClone.appendChild(node);
+          ancestorClone.classList.remove(this.cssClass);
+          range.collapseAfter(ancestorWithClass);
+          
+          range.insertNode(ancestorClone);
+          range.selectNode(ancestorClone);
         }
       }
       
