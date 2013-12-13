@@ -426,6 +426,7 @@
               }
             }
 
+            console.log("apply select", node);
             this.selectNode(range, node);    
             return;
           } catch(e) {}
@@ -457,7 +458,9 @@
 
     undoToRange: function(range) {
       var textNodes = range.getNodes([wysihtml5.TEXT_NODE]), textNode, ancestorWithClass;
-
+      
+      console.log(range);
+      
       if (textNodes.length) {
         splitBoundaries(range);
         textNodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));
@@ -476,12 +479,14 @@
             ancestor = range.commonAncestorContainer;
     
         textNodes = [node];
-        
+
         if(ancestor.nodeType === wysihtml5.ELEMENT_NODE) {
           // collapsed, element is empty
+          console.log("empty");
           ancestor.classList.remove(this.cssClass);
           ancestor.innerHTML = "";
           ancestor.appendChild(node);
+          range.selectNode(node);
         }
         else {
           // collapsed, element is not empty
@@ -494,7 +499,7 @@
           range.collapseAfter(ancestorWithClass);
           
           range.insertNode(ancestorClone);
-          range.selectNode(ancestorClone);
+          range.selectNode(node);
         }
       }
       
@@ -514,6 +519,7 @@
         try { node.innerHTML = wysihtml5.INVISIBLE_SPACE; } catch(e) {}
       }
       range.selectNodeContents(node);
+      console.log("select node contents", node);
       if (isEmpty && isElement) {
         range.collapse(false);
       } else if (isEmpty) {
