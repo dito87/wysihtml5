@@ -135,7 +135,7 @@
       return;
     } else {
       range.splitBoundaries();
-      var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));      
+      var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));  
       for(var i = 0; i < nodes.length; i++) {
         var 
           parent = nodes[i].parentNode,
@@ -269,7 +269,7 @@
         currentMerge,
         rangeStartNode = firstNode, 
         rangeEndNode = lastNode,
-        rangeStartOffset = range.startOffset, 
+        rangeStartOffset = 0, 
         rangeEndOffset = lastNode.length;
 
       var textNode, precedingTextNode;
