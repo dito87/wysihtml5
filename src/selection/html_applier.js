@@ -123,12 +123,10 @@
   
   function splitBoundaries(range) {
     if(range.collapsed) {
+      console.log("splitBoundaries", range);
       var textNode = range.startContainer;
       if(textNode.nodeType !== wysihtml5.TEXT_NODE) {
-        textNode.innerHTML = "";
-        textNode.appendChild(
-          range.getDocument().createTextNode(wysihtml5.INVISIBLE_SPACE)
-        );
+        textNode.innerHTML = wysihtml5.INVISIBLE_SPACE;
         textNode = textNode.firstChild;
       }
       
@@ -386,7 +384,9 @@
         nodes = [range.commonAncestorContainer];
       }
       else {
-        nodes = range.getNodes([wysihtml5.ELEMENT_NODE]);
+        nodes = range.getNodes([wysihtml5.ELEMENT_NODE], function(node) {
+          return node.nodeName === "SPAN";
+        });
       }
       
       for(var i = 0; i < nodes.length; i++) {
