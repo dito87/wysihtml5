@@ -40,22 +40,25 @@
       return [];
     }
     var element = getElementForTextNode(el);
-    return element.classList;
+    return element.className.split(" ");
   }
   
   function hasSameClasses(el1, el2) {
-    if(el1.classList.length !== el2.classList.length) {
+    var 
+      el1ClassList = el1.className.split(" "),
+      el2ClassList = el2.className.split(" ");
+      
+    if(el1ClassList.length !== el2ClassList.length) {
       return false;
     }
     
-    for(var i = 0; i < el1.classList.length; i++) {
-      if(!el2.classList.contains(el1.classList[i])) {
+    for(var i = 0; i < el1ClassList.length; i++) {
+      if(el2ClassList.indexOf(el1ClassList[i]) < 0) {
         return false;
       }
     }
     
     return true;
-    //return el1.className.replace(REG_EXP_WHITE_SPACE, " ") == el2.className.replace(REG_EXP_WHITE_SPACE, " ");
   }
   
   function getElementForTextNode(el) {
@@ -384,7 +387,7 @@
       
       for(var i = 0; i < parentClasses.length; i++) {
         if(!parentClasses[i].match(this.similarClassRegExp)) {
-          el.classList.add(parentClasses[i]);
+          el.className += " " + parentClasses[i];
         }
       }
       
