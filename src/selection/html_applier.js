@@ -61,14 +61,6 @@
   function getElementForTextNode(el) {
     return el.nodeType === wysihtml5.ELEMENT_NODE ? el : el.parentNode;
   }
-
-  function replaceWithOwnChildren(el) {
-    var parent = el.parentNode;
-    while (el.firstChild) {
-      parent.insertBefore(el.firstChild, el);
-    }
-    parent.removeChild(el);
-  }
   
   function remove(el) {
     el.parentNode.removeChild(el);
@@ -123,7 +115,6 @@
   
   function splitBoundaries(range) {
     if(range.collapsed) {
-      console.log("splitBoundaries", range);
       var textNode = range.startContainer;
       if(textNode.nodeType !== wysihtml5.TEXT_NODE) {
         textNode.innerHTML = wysihtml5.INVISIBLE_SPACE;
@@ -270,12 +261,16 @@
 
     // Normalizes nodes after applying a CSS class to a Range.
     postApply: function(textNodes, range) {
-      var firstNode = textNodes[0], lastNode = textNodes[textNodes.length - 1];
-
-      var merges = [], currentMerge;
-
-      var rangeStartNode = firstNode, rangeEndNode = lastNode;
-      var rangeStartOffset = range.startOffset, rangeEndOffset = lastNode.length;
+      var 
+        firstNode = textNodes[0], 
+        lastNode = textNodes[textNodes.length - 1],
+        rangeClone = range.cloneRange(),
+        merges = [], 
+        currentMerge,
+        rangeStartNode = firstNode, 
+        rangeEndNode = lastNode,
+        rangeStartOffset = range.startOffset, 
+        rangeEndOffset = lastNode.length;
 
       var textNode, precedingTextNode;
 
@@ -310,15 +305,44 @@
         }
         currentMerge.textNodes.push(nextTextNode);
       }
+      
+      this.removeEmptySiblings(firstNode, lastNode);
 
       // Do the merges
       if (merges.length) {
         for (i = 0, len = merges.length; i < len; ++i) {
           merges[i].doMerge();
         }
-      // Set the range boundaries
+        // Set the range boundaries
         range.setStart(rangeStartNode, rangeStartOffset);
         range.setEnd(rangeEndNode, rangeEndOffset);
+                
+        // collapse range if it was collapsed before merge
+        if(rangeClone.collapsed) {
+          range.collapse();
+        }
+      }
+    },
+    
+    removeEmptySiblings: function(firstNode, lastNode) {
+      var 
+        nodes = [
+          firstNode,
+          lastNode ? lastNode : firstNode
+        ],
+        siblings = ["previousElementSibling", "nextElementSibling"];
+      
+      for(var i = 0; i < nodes.length; i++) {
+        var sibling = nodes[i].parentNode[siblings[i]];
+        while(sibling !== null) {
+          var current = sibling;
+          sibling = sibling[siblings[i]];
+
+          var content = current.innerHTML;
+          if(content.trim().length <= 0) {
+            remove(current);
+          }
+        }
       }
     },
     
@@ -377,10 +401,8 @@
     
     applyToRange: function(range) {
       var nodes = [];
-      console.log("do", range, range.getNodes());
       splitBoundaries(range);
       if(range.collapsed) {
-        console.log("split", range, range.getNodes());
         nodes = [range.commonAncestorContainer];
       }
       else {
@@ -395,27 +417,21 @@
         }
       }
       
-      if (this.normalize && nodes.length > 0) {
+      if (this.normalize) {
         var textNodes = this.extractTextNodes(nodes);
-        
-        console.log(textNodes);
-        
         this.postApply(textNodes, range);
       }
     },
     
     undoToRange: function(range) {
-      console.log("undo", range, range.getNodes());
       var nodes = [];
       if(range.collapsed && range.commonAncestorContainer.nodeType === wysihtml5.ELEMENT_NODE) {
-        console.log("undo 1");
         // node is empty
         var node = range.commonAncestorContainer;
         node.className = node.className.replace(this.cssClass, "");
         nodes = [node];
       }
       else if(range.collapsed && range.commonAncestorContainer.nodeType === wysihtml5.TEXT_NODE) {
-        console.log("undo 2");
         var 
           node = getElementForTextNode(range.commonAncestorContainer),
           clone = node.cloneNode();
@@ -426,7 +442,6 @@
         range.insertNode(clone);
         range.selectNode(clone.firstChild);
         range.collapse();
-        console.log("selectNode", clone, range);
         nodes = [clone];
       }
       else {
@@ -438,11 +453,8 @@
         }
       }
       
-      if (this.normalize && nodes.length > 0) {
+      if (this.normalize) {
         var textNodes = this.extractTextNodes(nodes);
-        
-        console.log(textNodes);
-        
         this.postApply(textNodes, range);
       }
     },
@@ -472,7 +484,6 @@
         try { node.innerHTML = wysihtml5.INVISIBLE_SPACE; } catch(e) {}
       }
       range.selectNodeContents(node);
-      console.log("select node contents", node);
       if (isEmpty && isElement) {
         range.collapse(false);
       } else if (isEmpty) {
