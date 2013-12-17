@@ -3,7 +3,7 @@
       // Following elements are grouped
       // when the caret is within a H1 and the H4 is invoked, the H1 should turn into H4
       // instead of creating a H4 within a H1 which would result in semantically invalid html
-      BLOCK_ELEMENTS_GROUP    = ["H1", "H2", "H3", "H4", "H5", "H6", "P", "BLOCKQUOTE", "DIV"];
+      BLOCK_ELEMENTS_GROUP    = ["H1", "H2", "H3", "H4", "H5", "H6", "P", "BLOCKQUOTE", "DIV", "UL", "OL"];
   
   /**
    * Remove similiar classes (based on classRegExp)
@@ -184,7 +184,7 @@
         if(selectedNode.nodeName === "BODY") {
           var range = composer.selection.getRange();
           blockElements = range.getNodes([wysihtml5.ELEMENT_NODE], function(node) {
-            return node.nodeName === defaultNodeName;
+            return BLOCK_ELEMENTS_GROUP.indexOf(node.nodeName) > -1;
           });
         }
         else {
@@ -214,7 +214,7 @@
         return;
       }
 
-      blockElement = doc.createElement(nodeName || defaultNodeName);
+      var blockElement = doc.createElement(nodeName || defaultNodeName);
       if (className) {
         blockElement.className = className;
       }
