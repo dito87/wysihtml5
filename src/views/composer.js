@@ -358,6 +358,29 @@
         }
       }
       
+      function insertDefaultContent(node) {
+        var span = that.doc.createElement("SPAN"),
+          className = that.config.defaultClassNames['span'];
+
+        if(className !== undefined) {
+          span.className = className;
+        }
+
+        node.innerHTML = "";
+        node.appendChild(span);
+        
+        return span;
+      }
+      
+      function selectEmptySpan(span) {
+        if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
+          span.innerHTML = "<br>";
+          that.selection.setBefore(span.firstChild);
+        } else {
+          that.selection.selectNode(span, true);
+        }
+      }
+      
       // Ensure text is wrapped in span 
       dom.observe(this.element, ["focus", "keydown", "keyup"], function(event){
         // ignore keyup event except for delete and backspace
@@ -384,23 +407,9 @@
             node = that.element.firstChild ? 
               (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
               : that.element,
-            span = that.doc.createElement("SPAN"),
-            className = that.config.defaultClassNames['span'];
+            span = insertDefaultContent(node);
 
-          if(className !== undefined) {
-            span.className = className;
-          }
-
-          //console.log("node", node);
-          node.innerHTML = "";
-          node.appendChild(span);
-
-          if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
-            span.innerHTML = "<br>";
-            that.selection.setBefore(span.firstChild);
-          } else {
-            that.selection.selectNode(span, true);
-          }
+          selectEmptySpan(span);
         }
       });
         
@@ -437,15 +446,19 @@
                 return;
               }
 
-              list = dom.getParentElement(selectedNode, { nodeName: LIST_TAGS }, 2);
+              list = dom.getParentElement(selectedNode, { nodeName: LIST_TAGS }, 3);
 
               if (!list) {
                 adjust(selectedNode);
+                var span = insertDefaultContent(selectedNode);
+                selectEmptySpan(span);
               }
             }
 
             if (keyCode === wysihtml5.ENTER_KEY && blockElement.nodeName.match(/^H[1-6]$/)) {
               adjust(selectedNode);
+              span = insertDefaultContent(selectedNode);
+              selectEmptySpan(span);
             }
           }, 0);
           return;
