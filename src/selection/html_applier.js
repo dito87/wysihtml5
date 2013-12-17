@@ -40,13 +40,13 @@
       return [];
     }
     var element = getElementForTextNode(el);
-    return element.className.split(" ");
+    return element.className.trim().split(" ");
   }
   
   function hasSameClasses(el1, el2) {
     var 
-      el1ClassList = el1.className.split(" "),
-      el2ClassList = el2.className.split(" ");
+      el1ClassList = el1.className.trim().split(" "),
+      el2ClassList = el2.className.trim().split(" ");
       
     if(el1ClassList.length !== el2ClassList.length) {
       return false;
