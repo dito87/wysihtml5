@@ -150,15 +150,16 @@
   wysihtml5.commands.formatBlock = {
     exec: function(composer, command, nodeName, className, classRegExp) {
       var doc             = composer.doc,
-          blockElement    = this.state(composer, command, nodeName, className, classRegExp),
+          blockElements   = [ this.state(composer, command, nodeName, className, classRegExp) ],
           useLineBreaks   = composer.config.useLineBreaks,
           defaultNodeName = useLineBreaks ? "DIV" : "P",
           selectedNode;
 
       nodeName = typeof(nodeName) === "string" ? nodeName.toUpperCase() : nodeName;
       
-      if (blockElement) {
+      if (blockElements.length === 1 && blockElements[0] !== null) {
         composer.selection.executeAndRestoreSimple(function() {
+          var blockElement = blockElements[0];
           if (classRegExp) {
             _removeClass(blockElement, classRegExp);
           }
@@ -179,18 +180,29 @@
       // Find similiar block element and rename it (<h2 class="foo"></h2>  =>  <h1 class="foo"></h1>)
       if (nodeName === null || wysihtml5.lang.array(BLOCK_ELEMENTS_GROUP).contains(nodeName)) {
         selectedNode = composer.selection.getSelectedNode();
-        blockElement = dom.getParentElement(selectedNode, {
-          nodeName: BLOCK_ELEMENTS_GROUP
-        });
+        
+        if(selectedNode.nodeName === "BODY") {
+          var range = composer.selection.getRange();
+          blockElements = range.getNodes([wysihtml5.ELEMENT_NODE], function(node) {
+            return node.nodeName === defaultNodeName;
+          });
+        }
+        else {
+          blockElements = [dom.getParentElement(selectedNode, {
+            nodeName: BLOCK_ELEMENTS_GROUP
+          })];
+        }
 
-        if (blockElement) {
+        if(blockElements.length > 0 && blockElements[0] !== null){
           composer.selection.executeAndRestore(function() {
-            // Rename current block element to new block element and add class
-            if (nodeName) {
-              blockElement = dom.renameElement(blockElement, nodeName);
-            }
-            if (className) {
-              _addClass(blockElement, className, classRegExp);
+            for(var i = 0; i < blockElements.length; i++) {
+              // Rename current block element to new block element and add class
+              if (nodeName) {
+                blockElements[i] = dom.renameElement(blockElements[i], nodeName);
+              }
+              if (className) {
+                _addClass(blockElements[i], className, classRegExp);
+              }
             }
           });
           return;
