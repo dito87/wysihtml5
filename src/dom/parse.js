@@ -88,6 +88,9 @@ wysihtml5.dom.parse = (function() {
       element = elementOrHtml;
     }
     
+    // remove emty text nodes from pasted content
+    _removeEmptyTextNodes(element);
+    
     while (element.firstChild) {
       firstChild = element.firstChild;
       newNode = _convert(firstChild, cleanUp);
@@ -103,7 +106,43 @@ wysihtml5.dom.parse = (function() {
     // Insert new DOM tree
     element.appendChild(fragment);
     
+    console.log("element", element, fragment);
+    _wrapTextNodes(element, context);
     return isString ? wysihtml5.quirks.getCorrectInnerHTML(element) : element;
+  }
+  
+  function _wrapTextNodes(node, context) {
+    if(node.nodeType !== wysihtml5.TEXT_NODE) {
+      for(var i = 0; i < node.childNodes.length; i++) {
+        _wrapTextNodes(node.childNodes[i], context);
+      }
+    }
+    else {
+      var span = context.createElement("SPAN");
+      
+      if(node.nextSibling) {
+        node.parentNode.insertBefore(span, node.nextSibling);
+      }
+      else {
+        node.parentNode.appendChild(span);
+      }
+      
+      node.data = node.data.trim();
+      span.appendChild(node);
+    }
+  }
+  
+  function _removeEmptyTextNodes(node) {
+    if(node.nodeType !== wysihtml5.TEXT_NODE) {
+      for(var i = 0; i < node.childNodes.length; i++) {
+        _removeEmptyTextNodes(node.childNodes[i]);
+      }
+    }
+    else {
+      if(node.data.trim().length <= 0) {
+        node.parentNode.removeChild(node);
+      }
+    }
   }
   
   function _convert(oldNode, cleanUp) {
