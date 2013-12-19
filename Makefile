@@ -20,6 +20,7 @@ JS_FILES = src/wysihtml5.js \
   src/dom/copy_attributes.js \
   src/dom/copy_styles.js \
   src/dom/delegate.js \
+  src/dom/flatten.js \
   src/dom/get_as_dom.js \
   src/dom/get_parent_element.js \
   src/dom/get_style.js \

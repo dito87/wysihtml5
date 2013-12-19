@@ -13,7 +13,6 @@
   
   function doFlatten(node) {
     var children = getChildNodes(node, [wysihtml5.ELEMENT_NODE]);
-    console.log("children", children);
     
     if(children.length > 0) {
       for(var i = 0; i < children.length; i++) {
@@ -26,10 +25,7 @@
     var
       currentNode = node,
       parentNode = node.parentNode;
-      console.log("test", currentNode, parentNode);
-    while(parentNode.nodeName === currentNode.nodeName) {
-       console.log("do replacement", currentNode, parentNode);
-      
+    while(parentNode.nodeName === currentNode.nodeName) {      
       var
         currentClass = currentNode.className,
         parentClass = parentNode.className,
