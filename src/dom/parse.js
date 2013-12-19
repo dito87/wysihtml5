@@ -75,6 +75,8 @@ wysihtml5.dom.parse = (function() {
   function parse(elementOrHtml, rules, context, cleanUp) {
     wysihtml5.lang.object(currentRules).merge(defaultRules).merge(rules).get();
     
+    console.log(rules);
+    
     context           = context || elementOrHtml.ownerDocument || document;
     var fragment      = context.createDocumentFragment(),
         isString      = typeof(elementOrHtml) === "string",
@@ -108,9 +110,18 @@ wysihtml5.dom.parse = (function() {
     
     console.log("element", element, fragment);
     _wrapTextNodes(element, context);
+    _flatten(element);
     return isString ? wysihtml5.quirks.getCorrectInnerHTML(element) : element;
   }
   
+  /**
+   * Wrap all text nodes in a span. If text node is a line break, insert
+   * a br.
+   * 
+   * @param {type} node iterate over all child nodes
+   * @param {type} context document
+   * @returns {undefined}
+   */
   function _wrapTextNodes(node, context) {
     if(node.nodeType !== wysihtml5.TEXT_NODE) {
       for(var i = 0; i < node.childNodes.length; i++) {
@@ -134,6 +145,11 @@ wysihtml5.dom.parse = (function() {
     }
   }
   
+  /**
+   * Remove empty text node.
+   * @param {type} node iterate over all child nodes
+   * @returns {undefined}
+   */
   function _removeEmptyTextNodes(node) {
     if(node.nodeType !== wysihtml5.TEXT_NODE) {
       for(var i = 0; i < node.childNodes.length; i++) {
@@ -145,6 +161,21 @@ wysihtml5.dom.parse = (function() {
         node.parentNode.removeChild(node);
       }
     }
+  }
+  
+  
+  /**
+   * Convert to flat structure: <p><span class="bold">bold</span><span class="bold italic">bold italic</span></p>
+   * @param {type} node
+   * @returns {undefined}
+   */
+  function _flatten(node) {
+    /*
+    if(node.) {
+      for(var i = 0; i < node.childNodes.length; i++) {
+        _removeEmptyTextNodes(node.childNodes[i]);
+      }
+    }*/
   }
   
   function _convert(oldNode, cleanUp) {
@@ -250,7 +281,9 @@ wysihtml5.dom.parse = (function() {
   
   function _handleAttributes(oldNode, newNode, rule) {
     var attributes          = {},                         // fresh new set of attributes to set on newNode
-        setClass            = rule.set_class,             // classes to set
+        setClass            = typeof rule.set_class !== "string" // classes to set
+                                ? rule.set_class
+                                : [rule.set_class],
         addClass            = rule.add_class,             // add classes based on existing attributes
         setAttributes       = rule.set_attributes,        // attributes to set on the current node
         checkAttributes     = rule.check_attributes,      // check/convert values of attributes
@@ -286,7 +319,9 @@ wysihtml5.dom.parse = (function() {
     }
     
     if (setClass) {
-      classes.push(setClass);
+      for(var j = 0; j < setClass.length; j++) {
+        classes.push(setClass[j]);
+      }
     }
     
     if (addClass) {
@@ -317,7 +352,7 @@ wysihtml5.dom.parse = (function() {
         newClasses.push(currentClass);
       }
     }
-    
+        
     // remove duplicate entries and preserve class specificity
     newClassesLength = newClasses.length;
     while (newClassesLength--) {
@@ -326,7 +361,7 @@ wysihtml5.dom.parse = (function() {
         newUniqueClasses.unshift(currentClass);
       }
     }
-    
+        
     if (newUniqueClasses.length) {
       attributes["class"] = newUniqueClasses.join(" ");
     }
