@@ -78,9 +78,7 @@ wysihtml5.dom.parse = (function() {
       cleanUp = config.cleanUp;
     
     wysihtml5.lang.object(currentRules).merge(defaultRules).merge(rules).get();
-    
-    console.log(rules);
-    
+        
     context           = context || elementOrHtml.ownerDocument || document;
     var fragment      = context.createDocumentFragment(),
         isString      = typeof(elementOrHtml) === "string",
@@ -113,9 +111,8 @@ wysihtml5.dom.parse = (function() {
     // Insert new DOM tree
     element.appendChild(fragment);
     
-    console.log("element", element, fragment);
     _wrapTextNodes(element, defaultClass, context);
-    _flatten(element);
+    wysihtml5.dom.flatten(element);
     return isString ? wysihtml5.quirks.getCorrectInnerHTML(element) : element;
   }
   
@@ -172,21 +169,6 @@ wysihtml5.dom.parse = (function() {
         node.parentNode.removeChild(node);
       }
     }
-  }
-  
-  
-  /**
-   * Convert to flat structure: <p><span class="bold">bold</span><span class="bold italic">bold italic</span></p>
-   * @param {type} node
-   * @returns {undefined}
-   */
-  function _flatten(node) {
-    /*
-    if(node.) {
-      for(var i = 0; i < node.childNodes.length; i++) {
-        _removeEmptyTextNodes(node.childNodes[i]);
-      }
-    }*/
   }
   
   function _convert(oldNode, cleanUp) {
