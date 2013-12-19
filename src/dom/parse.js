@@ -72,7 +72,11 @@ wysihtml5.dom.parse = (function() {
    * Iterates over all childs of the element, recreates them, appends them into a document fragment
    * which later replaces the entire body content
    */
-  function parse(elementOrHtml, rules, context, cleanUp) {
+  function parse(elementOrHtml, config, context) {
+    var
+      rules = config.parserRules,
+      cleanUp = config.cleanUp;
+    
     wysihtml5.lang.object(currentRules).merge(defaultRules).merge(rules).get();
     
     console.log(rules);
@@ -82,7 +86,8 @@ wysihtml5.dom.parse = (function() {
         isString      = typeof(elementOrHtml) === "string",
         element,
         newNode,
-        firstChild;
+        firstChild,
+        defaultClass  = config.defaultClassNames;
     
     if (isString) {
       element = wysihtml5.dom.getAsDom(elementOrHtml, context);
@@ -109,7 +114,7 @@ wysihtml5.dom.parse = (function() {
     element.appendChild(fragment);
     
     console.log("element", element, fragment);
-    _wrapTextNodes(element, context);
+    _wrapTextNodes(element, defaultClass, context);
     _flatten(element);
     return isString ? wysihtml5.quirks.getCorrectInnerHTML(element) : element;
   }
@@ -122,17 +127,23 @@ wysihtml5.dom.parse = (function() {
    * @param {type} context document
    * @returns {undefined}
    */
-  function _wrapTextNodes(node, context) {
+  function _wrapTextNodes(node, defaultClass, context) {
     if(node.nodeType !== wysihtml5.TEXT_NODE) {
       for(var i = 0; i < node.childNodes.length; i++) {
-        _wrapTextNodes(node.childNodes[i], context);
+        _wrapTextNodes(node.childNodes[i], defaultClass, context);
       }
     }
     else if(node.parentNode.nodeName !== "SPAN") {
-      var element = node.data.trim().length > 0 
-        ? context.createElement("SPAN")
-        : context.createElement("BR");
-            
+      var 
+        element = node.data.trim().length > 0 
+          ? context.createElement("SPAN")
+          : context.createElement("BR"),
+        nodeName = element.nodeName.toLowerCase();
+      
+      if(defaultClass[nodeName]) {
+        element.className = defaultClass[nodeName];
+      }
+      
       if(node.nextSibling) {
         node.parentNode.insertBefore(element, node.nextSibling);
       }

@@ -152,7 +152,7 @@
     },
     
     parse: function(htmlOrElement) {
-      var returnValue = this.config.parser(htmlOrElement, this.config.parserRules, this.composer.sandbox.getDocument(), this.config.cleanUp);
+      var returnValue = this.config.parser(htmlOrElement, this.config, this.composer.sandbox.getDocument());
       if (typeof(htmlOrElement) === "object") {
         wysihtml5.quirks.redraw(htmlOrElement);
       }
