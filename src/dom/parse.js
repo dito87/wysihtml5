@@ -112,8 +112,24 @@ wysihtml5.dom.parse = (function() {
     element.appendChild(fragment);
     
     _wrapTextNodes(element, defaultClass, context);
+    _wrapBodySpans(element, context);
     wysihtml5.dom.flatten(element);
     return isString ? wysihtml5.quirks.getCorrectInnerHTML(element) : element;
+  }
+  
+  function _wrapBodySpans(node, context) {
+    var children = node.childNodes;
+    for(var i = 0; i < children.length; i++) {
+      if(children[i].nodeName === "SPAN") {
+        var 
+          span = children[i],
+          p = context.createElement("P");
+  
+        p.appendChild(span.cloneNode(true));
+        
+        span.parentElement.replaceChild(p, span);
+      }
+    }
   }
   
   /**
