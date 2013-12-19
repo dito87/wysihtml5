@@ -117,18 +117,20 @@ wysihtml5.dom.parse = (function() {
         _wrapTextNodes(node.childNodes[i], context);
       }
     }
-    else {
-      var span = context.createElement("SPAN");
-      
+    else if(node.parentNode.nodeName !== "SPAN") {
+      var element = node.data.trim().length > 0 
+        ? context.createElement("SPAN")
+        : context.createElement("BR");
+            
       if(node.nextSibling) {
-        node.parentNode.insertBefore(span, node.nextSibling);
+        node.parentNode.insertBefore(element, node.nextSibling);
       }
       else {
-        node.parentNode.appendChild(span);
+        node.parentNode.appendChild(element);
       }
       
       node.data = node.data.trim();
-      span.appendChild(node);
+      element.appendChild(node);
     }
   }
   
