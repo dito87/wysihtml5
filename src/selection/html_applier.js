@@ -89,116 +89,6 @@
     return true;
   }
 
-  function splitNodeAt(node, descendantNode, descendantOffset) {
-    var newNode;
-    if (rangy.dom.isCharacterDataNode(descendantNode)) {
-      if (descendantOffset == 0) {
-        descendantOffset = rangy.dom.getNodeIndex(descendantNode);
-        descendantNode = descendantNode.parentNode;
-      } else if (descendantOffset == descendantNode.length) {
-        descendantOffset = rangy.dom.getNodeIndex(descendantNode) + 1;
-        descendantNode = descendantNode.parentNode;
-      } else {
-        newNode = rangy.dom.splitDataNode(descendantNode, descendantOffset);
-      }
-    }
-    if (!newNode) {
-      newNode = descendantNode.cloneNode(false);
-      if (newNode.id) {
-        newNode.removeAttribute("id");
-      }
-      var child;
-      while ((child = descendantNode.childNodes[descendantOffset])) {
-        newNode.appendChild(child);
-      }
-      rangy.dom.insertAfter(newNode, descendantNode);
-    }
-    return (descendantNode == node) ? newNode : splitNodeAt(node, newNode.parentNode, rangy.dom.getNodeIndex(newNode));
-  }
-  
-  function splitBoundaries(range) {
-    if(range.collapsed) {
-      var textNode = range.startContainer;
-      if(textNode.nodeType !== wysihtml5.TEXT_NODE) {
-        textNode.innerHTML = wysihtml5.INVISIBLE_SPACE;
-        textNode = textNode.firstChild;
-      }
-      
-      var 
-        parent = textNode.parentNode,
-        newNode = splitNodeAt(parent, textNode, range.startOffset),
-        cloneNode = newNode.cloneNode();
-
-      cloneNode.innerHTML = wysihtml5.INVISIBLE_SPACE;
-      range.collapseBefore(newNode);
-      range.insertNode(cloneNode);
-      range.selectNode(cloneNode.firstChild);
-      range.collapse();
-
-      return;
-    } else {
-      range.splitBoundaries();
-      var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));  
-      for(var i = 0; i < nodes.length; i++) {
-        var 
-          parent = nodes[i].parentNode,
-          node = createNode(parent, nodes[i].data);
-
-        // Remove orphaned nodes
-        if(parent.parentNode === null) {
-          remove(nodes[i]);
-          continue;
-        }
-        
-        insertBefore(parent, node);
-
-        if(nodes[i].previousSibling !== null && nodes[i].previousSibling.data !== undefined) {
-          var prev = createNode(parent, nodes[i].previousSibling.data);
-          insertBefore(node, prev);
-        }
-
-        if(nodes[i].nextSibling !== null && nodes[i].nextSibling.data !== undefined) {
-          var next = createNode(parent, nodes[i].nextSibling.data);
-          insertAfter(node, next);
-        }
-
-        remove(parent);
-        
-        if(i === 0) {
-          range.setStartBefore(node);
-        }
-
-        if(i === nodes.length - 1) {
-          range.setEndAfter(node);
-        }   
-      }
-    }
-
-    function createNode(parent, text) {
-      var el = parent.cloneNode();
-      el.innerHTML = text;
-      return el;
-    }
-
-    function insertBefore(ref, node) {
-      ref.parentNode.insertBefore(node, ref);
-    }
-
-    function insertAfter(ref, node) {
-      ref.parentNode.insertBefore(node, ref.nextSibling);
-    }
-  }
-  
-  function removeUnselectedBoundaryTextNodes(range, textNodes) {
-     if(!range.collapsed && range.startOffset === textNodes[0].length) {
-       textNodes.splice(0,1);
-     }
-     if(!range.collapsed && range.endOffset === 0) {
-       textNodes.splice(textNodes.length - 1, 1);
-     }
-     return textNodes;
-   }
-
   function Merge(firstNode) {
     this.isElementMerge = (firstNode.nodeType == wysihtml5.ELEMENT_NODE);
     this.firstTextNode = this.isElementMerge ? firstNode.lastChild : firstNode;
@@ -404,7 +294,7 @@
     
     applyToRange: function(range) {
       var nodes = [];
-      splitBoundaries(range);
+      wysihtml5.dom.split.splitBoundaries(range);
       if(range.collapsed) {
         nodes = [range.commonAncestorContainer];
       }
@@ -448,7 +338,7 @@
         nodes = [clone];
       }
       else {
-        splitBoundaries(range);
+        wysihtml5.dom.split.splitBoundaries(range);
         nodes = range.getNodes([wysihtml5.ELEMENT_NODE]);
         
         for(var i = 0; i < nodes.length; i++) {
