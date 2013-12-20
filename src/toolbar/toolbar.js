@@ -162,22 +162,32 @@
           dom.setAttributes({ unselectable: "on" }).on(links[i]);
         }
       }
+      
+      var delegatedHandlers = [];
 
       // Needed for opera and chrome
-      dom.delegate(container, "[data-wysihtml5-command], [data-wysihtml5-action]", "mousedown", function(event) { event.preventDefault(); });
+      delegatedHandlers.push(dom.delegate(container, "[data-wysihtml5-command], [data-wysihtml5-action]", "mousedown", function(event) {
+        event.preventDefault();
+      }));
       
-      dom.delegate(container, "[data-wysihtml5-command]", "click", function(event) {
+      delegatedHandlers.push(dom.delegate(container, "[data-wysihtml5-command]", "click", function(event) {
         var link          = this,
             command       = link.getAttribute("data-wysihtml5-command"),
             commandValue  = link.getAttribute("data-wysihtml5-command-value");
         that.execCommand(command, commandValue);
         event.preventDefault();
-      });
+      }));
 
-      dom.delegate(container, "[data-wysihtml5-action]", "click", function(event) {
+      delegatedHandlers.push(dom.delegate(container, "[data-wysihtml5-action]", "click", function(event) {
         var action = this.getAttribute("data-wysihtml5-action");
         that.execAction(action);
         event.preventDefault();
+      }));
+
+      editor.on("destroy:composer", function() {
+        delegatedHandlers.forEach(function(handler) {
+          handler.stop();
+        });
       });
 
       editor.on("focus:composer", function() {
