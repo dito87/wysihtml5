@@ -393,7 +393,10 @@
           rangeClone = range.cloneRange();
           
         rangeClone.selectNodeContents(that.element);
-        var isRemoveAll = range.intersection(rangeClone) !== null && range.containsRange(rangeClone);      
+        var isRemoveAll = 
+          range.intersection(rangeClone) !== null 
+          && range.containsRange(rangeClone)
+          && event.type !== "focus";      
                   
         if(that.isEmpty() || isRemoveAll) {
           if (!that.config.useLineBreaks) {

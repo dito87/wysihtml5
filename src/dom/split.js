@@ -5,15 +5,19 @@
 
   function splitBoundaries(range) {
     if(range.collapsed) {
-      var textNode = range.startContainer;
+      var 
+        textNode = range.startContainer,
+        startOffset = range.startOffset;
+      
       if(textNode.nodeType !== wysihtml5.TEXT_NODE) {
-        textNode.innerHTML = wysihtml5.INVISIBLE_SPACE;
+        insertInvisibleSpaceIfEmpty(textNode, range);
         textNode = textNode.firstChild;
+        startOffset = textNode.length;
       }
 
-      var 
+      var
         parent = textNode.parentNode,
-        newNode = splitNodeAt(parent, textNode, range.startOffset),
+        newNode = splitNodeAt(parent, textNode, startOffset),
         cloneNode = newNode.cloneNode();
 
       cloneNode.innerHTML = wysihtml5.INVISIBLE_SPACE;
@@ -21,7 +25,11 @@
       range.insertNode(cloneNode);
       range.selectNode(cloneNode.firstChild);
       range.collapse();
-
+      
+      if(cloneNode.nextSibling) {
+        insertInvisibleSpaceIfEmpty(cloneNode.nextSibling, range);        
+      }
+      
       return;
     } else {
       range.splitBoundaries();
@@ -108,14 +116,27 @@
   };
   
   function removeUnselectedBoundaryTextNodes(range, textNodes) {
-     if(!range.collapsed && range.startOffset === textNodes[0].length) {
-       textNodes.splice(0,1);
-     }
-     if(!range.collapsed && range.endOffset === 0) {
-       textNodes.splice(textNodes.length - 1, 1);
-     }
-     return textNodes;
-   };
+    if(!range.collapsed && range.startOffset === textNodes[0].length) {
+      textNodes.splice(0,1);
+    }
+    if(!range.collapsed && range.endOffset === 0) {
+      textNodes.splice(textNodes.length - 1, 1);
+    }
+    return textNodes;
+  };
+   
+  function insertInvisibleSpaceIfEmpty(node, range) {
+    if(!node.firstChild) {
+      node.innerHTML = wysihtml5.INVISIBLE_SPACE;
+    }
+    else if(node.firstChild.nodeType !== wysihtml5.TEXT_NODE) {
+      var 
+        doc = range.getDocument(),
+        invisibleNode = doc.createTextNode(wysihtml5.INVISIBLE_SPACE);
+
+      node.insertBefore(invisibleNode, node.firstChild);
+    }
+  }
   
   wysihtml5.dom.split = {
     splitBoundaries: splitBoundaries,
