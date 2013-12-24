@@ -1,0 +1,14 @@
+{
+  "name": "wysihtml5",
+  "location": "dito87/wysihtml5",
+  "version": "0.4.0pre",
+  "description": "wysihtml5 is an open source rich text editor based on HTML5 technology and the progressive-enhancement approach.",
+  "homepage": "https://github.com/xing/wysihtml5",
+  "main": [
+    "dist/wysihtml5-0.4.0pre.js"
+    ],
+  "ignore": [
+    "/*",
+    "!dist/*"
+  ]
+}
