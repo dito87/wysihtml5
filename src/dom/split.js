@@ -36,7 +36,7 @@
       var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));  
       for(var i = 0; i < nodes.length; i++) {
         var 
-          parent = nodes[i].parentNode,
+          parent = findStyleParent(nodes[i]),
           node = createNode(parent, nodes[i].data);
 
         // Remove orphaned nodes
@@ -85,6 +85,18 @@
     
     function remove(el) {
       el.parentNode.removeChild(el);
+    }
+    
+    function findStyleParent(node) {
+      var 
+        nodeName = "SPAN";
+        parent = node.parentNode;
+        
+      while(parent.nodeName !== nodeName) {
+        var parent = parent.parentNode;
+      }
+      
+      return parent;  
     }
   };
   
