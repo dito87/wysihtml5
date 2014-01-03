@@ -199,7 +199,7 @@
         currentMerge.textNodes.push(nextTextNode);
       }
       
-      this.removeEmptySiblings(firstNode, lastNode);
+      //this.removeEmptySiblings(firstNode, lastNode);
 
       // Do the merges
       if (merges.length) {
@@ -217,6 +217,7 @@
       }
     },
     
+    /*
     removeEmptySiblings: function(firstNode, lastNode) {
       var 
         nodes = [
@@ -238,7 +239,7 @@
         }
       }
     },
-    
+    */
     getAdjacentMergeableTextNode: function(node, forward) {
         var isTextNode = (node.nodeType == wysihtml5.TEXT_NODE);
         var el = isTextNode ? node.parentNode : node;
