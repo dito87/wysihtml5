@@ -50,7 +50,14 @@
     var isToggable = toggable === undefined ? true : toggable;
     var identifier = tagName + ":" + className + ":" + isToggable.toString();
     if (!htmlApplier[identifier]) {
-      htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier(_getTagNames(tagName), className, classRegExp, true, toggable);
+      //htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier(_getTagNames(tagName), className, classRegExp, true, toggable);
+      htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier({
+        tagNames: _getTagNames(tagName),
+        className: className,
+        classRegExp: classRegExp,
+        applyNormalization: true,
+        toggable: toggable
+      });
     }
     return htmlApplier[identifier];
   }
@@ -61,7 +68,7 @@
       if (!range) {
         return false;
       }
-      _getApplier(tagName, className, classRegExp, toggable).toggleRange(range);
+      _getApplier(tagName, className, classRegExp, toggable, composer).toggleRange(range);
       composer.selection.setSelection(range);
     },
 

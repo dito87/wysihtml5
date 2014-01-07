@@ -1,7 +1,7 @@
 /**
  * Split nodes
  */
-(function(wysihtml5) {
+(function(wysihtml5, rangy) {
 
   function splitBoundaries(range) {
     if(range.collapsed) {
@@ -36,28 +36,29 @@
       var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));  
       for(var i = 0; i < nodes.length; i++) {
         var 
-          parent = findStyleParent(nodes[i]),
-          node = createNode(parent, nodes[i].data);
+          styleParent = findStyleParent(nodes[i]),
+          innerHtml = styleParent === nodes[i].parentNode ? nodes[i].data : styleParent.innerHTML,
+          node = createNode(styleParent, innerHtml);
 
         // Remove orphaned nodes
-        if(parent.parentNode === null) {
+        if(styleParent.parentNode === null) {
           remove(nodes[i]);
           continue;
         }
 
-        insertBefore(parent, node);
+        insertBefore(styleParent, node);
 
         if(nodes[i].previousSibling !== null && nodes[i].previousSibling.data !== undefined) {
-          var prev = createNode(parent, nodes[i].previousSibling.data);
+          var prev = createNode(styleParent, nodes[i].previousSibling.data);
           insertBefore(node, prev);
         }
 
         if(nodes[i].nextSibling !== null && nodes[i].nextSibling.data !== undefined) {
-          var next = createNode(parent, nodes[i].nextSibling.data);
+          var next = createNode(styleParent, nodes[i].nextSibling.data);
           insertAfter(node, next);
         }
 
-        remove(parent);
+        remove(styleParent);
 
         if(i === 0) {
           range.setStartBefore(node);
@@ -69,9 +70,9 @@
       }
     }
     
-    function createNode(parent, text) {
+    function createNode(parent, innerHtml) {
       var el = parent.cloneNode();
-      el.innerHTML = text;
+      el.innerHTML = innerHtml;
       return el;
     }
 
@@ -155,4 +156,4 @@
     splitNodeAt: splitNodeAt
   };
   
-})(wysihtml5);
+})(wysihtml5, rangy);

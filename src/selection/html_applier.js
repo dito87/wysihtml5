@@ -130,13 +130,13 @@
     }
   };
 
-  function HTMLApplier(tagNames, cssClass, similarClassRegExp, normalize, toggable) {
-    this.tagNames = tagNames || [defaultTagName];
-    this.cssClass = cssClass || "";
-    this.similarClassRegExp = similarClassRegExp;
-    this.normalize = normalize;
+  function HTMLApplier(config) {    
+    this.tagNames = config.tagNames || [defaultTagName];
+    this.cssClass = config.className || "";
+    this.similarClassRegExp = config.classRegExp;
+    this.normalize = config.applyNormalization;
     this.applyToAnyTagName = false;
-    this.toggable = toggable === undefined ? true : toggable;
+    this.toggable = config.toggable === undefined ? true : config.toggable;
   }
 
   HTMLApplier.prototype = {
@@ -215,6 +215,10 @@
           range.collapse();
         }
       }
+    },
+    
+    isNormalizeNode: function(node) {
+      
     },
     
     /*
