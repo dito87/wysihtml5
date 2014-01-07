@@ -6,10 +6,5 @@
   "homepage": "https://github.com/xing/wysihtml5",
   "main": [
     "dist/wysihtml5-0.4.0pre.js"
-    ],
-  "ignore": [
-    "/*",
-    "!dist/*",
-    "!src/*"
   ]
 }
