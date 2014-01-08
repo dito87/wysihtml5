@@ -388,32 +388,41 @@
           return;
         }
         
-        var 
-          range = that.selection.getRange(),
-          rangeClone = range.cloneRange();
-          
-        rangeClone.selectNodeContents(that.element);
-        var isRemoveAll = 
-          range.intersection(rangeClone) !== null 
-          && range.containsRange(rangeClone)
-          && event.type !== "focus";      
-                  
-        if(that.isEmpty() || isRemoveAll) {
-          if (!that.config.useLineBreaks) {
-            var paragraph = that.doc.createElement("P");
-            that.element.innerHTML = "";
-            that.element.appendChild(paragraph);
-            //that.selection.selectNode(paragraph, true);
-          }
-          
-          var 
-            node = that.element.firstChild ? 
-              (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
-              : that.element,
-            span = insertDefaultContent(node);
-
-          selectEmptySpan(span);
+        if(event.type === "focus") {
+          setTimeout(enforceDomStructure, 0); // make sure a range is set before running the function
         }
+        else {
+          enforceDomStructure();
+        }
+        
+        function enforceDomStructure() {
+          var 
+            range = that.selection.getRange(),
+            rangeClone = range.cloneRange();
+
+          rangeClone.selectNodeContents(that.element);
+          var isRemoveAll = 
+            range.intersection(rangeClone) !== null 
+            && range.containsRange(rangeClone)
+            && event.type !== "focus";      
+
+          if(that.isEmpty() || isRemoveAll) {
+            if (!that.config.useLineBreaks) {
+              var paragraph = that.doc.createElement("P");
+              that.element.innerHTML = "";
+              that.element.appendChild(paragraph);
+              //that.selection.selectNode(paragraph, true);
+            }
+
+            var 
+              node = that.element.firstChild ? 
+                (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
+                : that.element,
+              span = insertDefaultContent(node);
+
+            selectEmptySpan(span);
+          }
+        };
       });
         
       // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
