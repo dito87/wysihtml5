@@ -384,7 +384,7 @@
       // Ensure text is wrapped in span 
       dom.observe(this.element, ["focus", "keydown", "keyup"], function(event){
         // ignore keyup event except for delete and backspace
-        if(event.type === "keyup" && (event.keyCode !== wysihtml5.DELETE_KEY && event.keyCode !== wysihtml5.BACKSPACE_KEY)) {
+        if(event.ctrlKey || (event.type === "keyup" && (event.keyCode !== wysihtml5.DELETE_KEY && event.keyCode !== wysihtml5.BACKSPACE_KEY))) {
           return;
         }
         
