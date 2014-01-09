@@ -1,4 +1,4 @@
-(function(wysihtml5) {
+(function(wysihtml5, rangy) {
   var dom       = wysihtml5.dom,
       browser   = wysihtml5.browser;
   
@@ -388,41 +388,36 @@
           return;
         }
         
-        if(event.type === "focus") {
-          setTimeout(enforceDomStructure, 0); // make sure a range is set before running the function
-        }
-        else {
-          enforceDomStructure();
-        }
-        
-        function enforceDomStructure() {
-          var 
-            range = that.selection.getRange(),
-            rangeClone = range.cloneRange();
+        var 
+          range = that.selection.getRange(),
+          isRemoveAll = false;
+
+        if(range) {   // range is not set in focus event when the editor is openend in webkit
+          var rangeClone = range.cloneRange();
 
           rangeClone.selectNodeContents(that.element);
-          var isRemoveAll = 
+          isRemoveAll = 
             range.intersection(rangeClone) !== null 
             && range.containsRange(rangeClone)
             && event.type !== "focus";      
+        }
 
-          if(that.isEmpty() || isRemoveAll) {
-            if (!that.config.useLineBreaks) {
-              var paragraph = that.doc.createElement("P");
-              that.element.innerHTML = "";
-              that.element.appendChild(paragraph);
-              //that.selection.selectNode(paragraph, true);
-            }
-
-            var 
-              node = that.element.firstChild ? 
-                (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
-                : that.element,
-              span = insertDefaultContent(node);
-
-            selectEmptySpan(span);
+        if(that.isEmpty() || isRemoveAll) {
+          if (!that.config.useLineBreaks) {
+            var paragraph = that.doc.createElement("P");
+            that.element.innerHTML = "";
+            that.element.appendChild(paragraph);
+            //that.selection.selectNode(paragraph, true);
           }
-        };
+
+          var 
+            node = that.element.firstChild ? 
+              (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
+              : that.element,
+            span = insertDefaultContent(node);
+
+          selectEmptySpan(span);
+        }
       });
         
       // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
@@ -483,4 +478,4 @@
       });
     }
   });
-})(wysihtml5);
+})(wysihtml5, rangy);
