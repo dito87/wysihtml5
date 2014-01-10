@@ -1,5 +1,7 @@
 wysihtml5.commands.insertUnorderedList = {
-  exec: function(composer, command) {
+  exec: function(composer, command, style) {
+    var STYLE_REG_EXP = /wysiwyg-list-style-[0-9a-f\-]+/g;
+    
     var doc           = composer.doc,
         selectedNode  = composer.selection.getSelectedNode(),
         list          = wysihtml5.dom.getParentElement(selectedNode, { nodeName: "UL" }),
@@ -8,12 +10,16 @@ wysihtml5.commands.insertUnorderedList = {
         isEmpty,
         tempElement;
     
+    /*
     if (!list && !otherList && composer.commands.support(command)) {
       doc.execCommand(command, false, null);
       return;
-    }
+    }*/
     
-    if (list) {
+    if (list && !this.compareStyle(list, style)) {
+      list.className = list.className.replace(STYLE_REG_EXP, "");
+      list.className = list.className + " wysiwyg-list-style-" + style;
+    } else if (list) {
       // Unwrap list
       // <ul><li>foo</li><li>bar</li></ul>
       // becomes:
@@ -36,6 +42,9 @@ wysihtml5.commands.insertUnorderedList = {
       isEmpty = tempElement.innerHTML === "" || tempElement.innerHTML === wysihtml5.INVISIBLE_SPACE || tempElement.innerHTML === "<br>";
       composer.selection.executeAndRestore(function() {
         list = wysihtml5.dom.convertToList(tempElement, "ul");
+        if(style) {
+          list.className = list.className + " wysiwyg-list-style-" + style;
+        }
       });
       if (isEmpty) {
         composer.selection.selectNode(list.querySelector("li"), true);
@@ -43,8 +52,19 @@ wysihtml5.commands.insertUnorderedList = {
     }
   },
   
-  state: function(composer) {
-    var selectedNode = composer.selection.getSelectedNode();
-    return wysihtml5.dom.getParentElement(selectedNode, { nodeName: "UL" });
+  state: function(composer, command, style) {
+    var 
+      selectedNode = composer.selection.getSelectedNode(),
+      list = wysihtml5.dom.getParentElement(selectedNode, { nodeName: "UL" });
+    
+    if(style) {
+      return this.compareStyle(list, style);
+    } else {
+      return list;
+    }
+  },
+  
+  compareStyle: function(list, style) {
+    return list && style && list.className.indexOf(style) > -1;  
   }
 };
