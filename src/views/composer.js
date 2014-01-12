@@ -365,7 +365,8 @@
         if(className !== undefined) {
           span.className = className;
         }
-
+        
+        span.innerHTML = wysihtml5.INVISIBLE_SPACE;
         node.innerHTML = "";
         node.appendChild(span);
         
@@ -380,6 +381,37 @@
           that.selection.selectNode(span, true);
         }
       }
+      
+      function findParentParagraph(node) {
+        var current = node;
+        while(current !== null && current.nodeName !== "P") {
+          current = current.parentNode;
+        }
+        return current;
+      }
+      
+      if(!that.config.useLineBreaks) {
+        // insert newline
+        dom.observe(this.element, "keydown", function(event){
+          if(event.keyCode === wysihtml5.ENTER_KEY) {
+            event.preventDefault();
+
+            if(event.type === "keydown") {
+
+              var 
+                range = that.selection.getRange(),
+                insertAfter = findParentParagraph(range.commonAncestorContainer),
+                paragraph = that.doc.createElement("P");
+
+              insertAfter.parentNode.insertBefore(paragraph, insertAfter.nextSibling);
+              //that.element.appendChild(paragraph);
+              var span = insertDefaultContent(paragraph);
+              selectEmptySpan(span);
+            }
+          }
+        });
+      }
+              
       
       // Ensure text is wrapped in span 
       dom.observe(this.element, ["focus", "keydown", "keyup"], function(event){
@@ -419,7 +451,7 @@
           selectEmptySpan(span);
         }
       });
-        
+      
       // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
       // Inserting an invisible white space in front of it fixes the issue
       if (browser.createsNestedInvalidMarkupAfterPaste()) {
