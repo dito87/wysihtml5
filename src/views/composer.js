@@ -390,28 +390,27 @@
         return current;
       }
       
+      // Ensure empty lines contain default content
       if(!that.config.useLineBreaks) {
         // insert newline
-        dom.observe(this.element, "keydown", function(event){
+        dom.observe(this.element, "keyup", function(event) {
           if(event.keyCode === wysihtml5.ENTER_KEY) {
-            event.preventDefault();
+            var 
+              range = that.selection.getRange(),
+              p = findParentParagraph(range.commonAncestorContainer);
+            
+            // only if text, do nothing if elment is list etc...
+            if(p) {
+              var prev = p.previousSibling;
 
-            if(event.type === "keydown") {
-
-              var 
-                range = that.selection.getRange(),
-                insertAfter = findParentParagraph(range.commonAncestorContainer),
-                paragraph = that.doc.createElement("P");
-
-              insertAfter.parentNode.insertBefore(paragraph, insertAfter.nextSibling);
-              //that.element.appendChild(paragraph);
-              var span = insertDefaultContent(paragraph);
-              selectEmptySpan(span);
+              if(prev.firstChild.nodeName === "BR") {
+                prev.removeChild(prev.firstChild);
+                prev.lastChild.appendChild(that.doc.createElement("BR"));
+              }
             }
           }
         });
-      }
-              
+      }              
       
       // Ensure text is wrapped in span 
       dom.observe(this.element, ["focus", "keydown", "keyup"], function(event){
