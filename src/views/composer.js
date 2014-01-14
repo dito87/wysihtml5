@@ -390,6 +390,34 @@
         return current;
       }
       
+      // Ensure delete and enter on multiple empty lines
+      // does not break structure
+      dom.observe(this.element, "keyup", function(event) {
+        if(
+          event.keyCode === wysihtml5.ENTER_KEY
+          || event.keyCode === wysihtml5.DELETE_KEY
+          || event.keyCode === wysihtml5.BACKSPACE_KEY
+        ) {
+          event.preventDefault();
+          var range = that.selection.getRange();
+                    
+          if(range.startContainer === that.doc.body) {
+            var 
+              paragraph = that.doc.createElement("P"),
+              span = insertDefaultContent(paragraph);
+            
+            range.insertNode(paragraph);
+            
+            var next = paragraph.nextSibling;
+            if(next && next.nodeName === "BR") {
+              paragraph.parentNode.removeChild(next);
+            }
+            
+            selectEmptySpan(span);
+          }
+        }
+      });
+      
       // Ensure empty lines contain default content
       if(!that.config.useLineBreaks) {
         // insert newline
@@ -403,7 +431,7 @@
             if(p) {
               var prev = p.previousSibling;
 
-              if(prev.firstChild.nodeName === "BR") {
+              if(prev && prev.firstChild.nodeName === "BR") {
                 prev.removeChild(prev.firstChild);
                 prev.lastChild.appendChild(that.doc.createElement("BR"));
               }
@@ -413,9 +441,9 @@
       }              
       
       // Ensure text is wrapped in span 
-      dom.observe(this.element, ["focus", "keydown", "keyup"], function(event){
+      dom.observe(this.element, ["focus", "keydown"], function(event){
         // ignore keyup event except for delete and backspace
-        if(event.ctrlKey || (event.type === "keyup" && (event.keyCode !== wysihtml5.DELETE_KEY && event.keyCode !== wysihtml5.BACKSPACE_KEY))) {
+        if(event.ctrlKey) {
           return;
         }
         
