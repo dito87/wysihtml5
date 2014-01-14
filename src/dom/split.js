@@ -90,7 +90,7 @@
     
     function findStyleParent(node) {
       var 
-        nodeName = "SPAN";
+        nodeName = "SPAN",
         parent = node.parentNode;
         
       while(parent.nodeName !== nodeName) {
