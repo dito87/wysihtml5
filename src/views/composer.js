@@ -393,14 +393,13 @@
       // Ensure delete and enter on multiple empty lines
       // does not break structure
       dom.observe(this.element, "keyup", function(event) {
+        var range = that.selection.getRange();
+        
         if(
           event.keyCode === wysihtml5.ENTER_KEY
           || event.keyCode === wysihtml5.DELETE_KEY
           || event.keyCode === wysihtml5.BACKSPACE_KEY
-        ) {
-          event.preventDefault();
-          var range = that.selection.getRange();
-                    
+        ) {        
           if(range.startContainer === that.doc.body) {
             var 
               paragraph = that.doc.createElement("P"),
@@ -415,6 +414,18 @@
             
             selectEmptySpan(span);
           }
+        } else if(range.startContainer.parentNode === that.doc.body) {
+          // any other key was pressed. Insert paragraph and append
+          // character
+          var 
+            paragraph = that.doc.createElement("P"),
+            span = insertDefaultContent(paragraph),
+            textNode = range.startContainer;
+            
+          span.innerHTML = textNode.data;
+          textNode.parentNode.insertBefore(paragraph, textNode);
+          textNode.parentNode.removeChild(textNode);
+          range.collapseAfter(span.firstChild);
         }
       });
       
@@ -487,7 +498,6 @@
           that.selection.insertNode(invisibleSpace);
         });
       }
-
       
       dom.observe(this.doc, "keydown", function(event) {
         var keyCode = event.keyCode;
