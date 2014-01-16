@@ -111,7 +111,6 @@
           iframe = doc.createElement("iframe");
       iframe.className = "wysihtml5-sandbox";
       wysihtml5.dom.setAttributes({
-        "security":           "restricted",
         "allowtransparency":  "true",
         "frameborder":        0,
         "width":              0,
