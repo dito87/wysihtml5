@@ -344,6 +344,18 @@
       var that                              = this,
           USE_NATIVE_LINE_BREAK_INSIDE_TAGS = ["LI", "P", "H1", "H2", "H3", "H4", "H5", "H6"],
           LIST_TAGS                         = ["UL", "OL", "MENU"];
+
+      /*
+      var allowedStrucure = [
+        ["SPAN", "P", "BODY"],
+        ["SPAN", "LI", "UL", "BODY"],
+        ["SPAN", "LI", "OL", "BODY"]
+      ];
+      */
+     var 
+      allowedStructure = ["#text", "SPAN", "P", "BODY"],
+      defaultStructure = ["SPAN", "P"]; // not including body
+        
       
       function adjust(selectedNode) {
         var parentElement = dom.getParentElement(selectedNode, { nodeName: ["P", "DIV"] }, 2);
@@ -358,6 +370,52 @@
         }
       }
       
+      function validateStructure(node, level) {
+        if(node && node.nodeName === allowedStructure[level]) {   
+          if(allowedStructure[level + 1]) {
+            return validateStructure(node.parentNode, level + 1);
+          } else {
+            return true;
+          }
+        }
+        
+        return false;
+      }
+      
+      function createDefaultStructure(textNode) {
+        var 
+          order = defaultStructure.slice(0).reverse(),
+          topNode = that.doc.createElement(order[0]),
+          node = topNode;
+        
+          for(var i = 1; i < order.length; i++) {
+            var 
+              temp = that.doc.createElement(order[i]),
+              className = that.config.defaultClassNames[order[i].toLowerCase()];
+        
+            if(className) {
+              temp.className = className;
+            };
+
+            node.appendChild(temp);
+            node = temp;
+          }
+          
+          // insert text
+          if(textNode.nodeType === wysihtml5.TEXT_NODE) {
+            node.appendChild(textNode);
+          } else {
+            node.innerHTML = wysihtml5.INVISIBLE_SPACE;
+          }
+          
+          // Always end line with a BR
+          if (node.lastChild.nodeName !== "BR") {
+            node.appendChild(that.doc.createElement("BR"));
+          }
+          
+        return topNode;
+      }
+
       function insertDefaultContent(node) {
         var span = that.doc.createElement("SPAN"),
           className = that.config.defaultClassNames['span'];
@@ -390,45 +448,70 @@
         return current;
       }
       
-      // Ensure delete and enter on multiple empty lines
-      // does not break structure
-      dom.observe(this.element, "keyup", function(event) {
-        var range = that.selection.getRange();
+      // ugly as hell but had no better idea to check if line is
+      // empty or not.
+      function isEmptyLine(node) {
+        if(node.firstChild) {
+          var n1 = node.firstChild;
+          if(n1 && n1.nodeName === "BR") {
+            return true;
+          }
+          
+          var n2 = n1.firstChild;
+          if(n2 && n2.nodeName === "SPAN") {
+            var n3 = n2.firstChild;
+            if(
+              n3.nodeType === wysihtml5.TEXT_NODE 
+              && n3.data === wysihtml5.INVISIBLE_SPACE
+              && n3.nextSibling && n3.nextSibling.nodeName === "BR"
+            ) {
+              return true;
+            }
+          }
+        }
         
-        if(
-          event.keyCode === wysihtml5.ENTER_KEY
-          || event.keyCode === wysihtml5.DELETE_KEY
-          || event.keyCode === wysihtml5.BACKSPACE_KEY
-        ) {        
-          if(range.startContainer === that.doc.body) {
-            var 
-              paragraph = that.doc.createElement("P"),
-              span = insertDefaultContent(paragraph);
+        return false;
+      }
+     
+      if(!that.config.useLineBreaks) {        
+        dom.observe(this.element, "keyup", function(event) {
+          if (event.ctrlKey) {
+            return;
+          }
+
+          var 
+            range = that.selection.getRange(),
+            caretPosNode = range.endContainer;
             
-            range.insertNode(paragraph);
-            
-            var next = paragraph.nextSibling;
-            if(next && next.nodeName === "BR") {
-              paragraph.parentNode.removeChild(next);
+          if(!validateStructure(caretPosNode, 0)) {
+            // insert default structure here
+            // find child element of body to replace first
+            var replace = caretPosNode;
+            while(replace.parentNode && replace.parentNode.nodeName !== "BODY") {
+              replace = replace.parentNode;
             }
             
-            selectEmptySpan(span);
-          }
-        } else if(range.startContainer.parentNode === that.doc.body) {
-          // any other key was pressed. Insert paragraph and append
-          // character
-          var 
-            paragraph = that.doc.createElement("P"),
-            span = insertDefaultContent(paragraph),
-            textNode = range.startContainer;
+            // create structure
+            var 
+              defStructure = createDefaultStructure(caretPosNode),
+              body = that.doc.body;
+            console.log("replace", replace);
             
-          span.innerHTML = textNode.data;
-          textNode.parentNode.insertBefore(paragraph, textNode);
-          textNode.parentNode.removeChild(textNode);
-          range.collapseAfter(span.firstChild);
-        }
-      });
-      
+            // black magic ahead!
+            try {
+              body.insertBefore(defStructure, replace);
+              body.removeChild(replace);
+            } catch (e) {
+              body.appendChild(defStructure);
+            }
+            
+            that.selection.setBefore(defStructure.firstChild.lastChild);
+            //selectEmptySpan(defStructure.firstChild);   // TEMP ONLY!
+          }
+        });
+        
+      }
+     
       // Ensure empty lines contain default content
       if(!that.config.useLineBreaks) {
         // insert newline
@@ -439,56 +522,28 @@
               p = findParentParagraph(range.commonAncestorContainer);
             
             // only if text, do nothing if elment is list etc...
-            if(p) {
-              var prev = p.previousSibling;
-
-              if(prev && prev.firstChild.nodeName === "BR") {
-                prev.removeChild(prev.firstChild);
-                prev.lastChild.appendChild(that.doc.createElement("BR"));
-              }
+            if(p && p.previousSibling && isEmptyLine(p.previousSibling)) {
+              var 
+                prev = p.previousSibling,
+                span = insertDefaultContent(prev);
+              span.appendChild(that.doc.createElement("BR"));
             }
           }
         });
-      }              
+      }            
       
-      // Ensure text is wrapped in span 
-      dom.observe(this.element, ["focus", "keydown"], function(event){
-        // ignore keyup event except for delete and backspace
-        if(event.ctrlKey) {
-          return;
-        }
-        
-        var 
-          range = that.selection.getRange(),
-          isRemoveAll = false;
-
-        if(range) {   // range is not set in focus event when the editor is openend in webkit
-          var rangeClone = range.cloneRange();
-
-          rangeClone.selectNodeContents(that.element);
-          isRemoveAll = 
-            range.intersection(rangeClone) !== null 
-            && range.containsRange(rangeClone)
-            && event.type !== "focus";      
-        }
-
-        if(that.isEmpty() || isRemoveAll) {
-          if (!that.config.useLineBreaks) {
+      // Ensure default markup is in place if
+      // content is empty
+      if(!that.config.useLineBreaks) {
+        dom.observe(this.element, "focus", function() {
+          if(that.isEmpty()) {
             var paragraph = that.doc.createElement("P");
-            that.element.innerHTML = "";
-            that.element.appendChild(paragraph);
-            //that.selection.selectNode(paragraph, true);
+
+            insertDefaultContent(paragraph);
+            that.doc.body.appendChild(paragraph);
           }
-
-          var 
-            node = that.element.firstChild ? 
-              (that.element.firstChild.nodeName === "P" ? that.element.firstChild : that.element) 
-              : that.element,
-            span = insertDefaultContent(node);
-
-          selectEmptySpan(span);
-        }
-      });
+        });
+      }
       
       // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
       // Inserting an invisible white space in front of it fixes the issue
