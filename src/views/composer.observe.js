@@ -163,6 +163,11 @@
         }, 0);
       });
     }
+
+    // --------- Safari doesn't set focus after re-positioning caret, see e.g. https://tracker.moodle.org/browse/MDL-41328 ---------
+    dom.observe(element, "touchend", function() {
+      that.doc.defaultView.focus();
+    });
     
     // --------- Show url in tooltip when hovering links or images ---------
     var titlePrefixes = {
