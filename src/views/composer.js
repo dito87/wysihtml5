@@ -353,7 +353,7 @@
       ];
       */
      var 
-      allowedStructure = ["#text", "SPAN", "P", "BODY"],
+      allowedStructure = ["SPAN", "P", "BODY"],
       defaultStructure = ["SPAN", "P"]; // not including body
         
       
@@ -371,9 +371,11 @@
       }
       
       function validateStructure(node, level) {
-        if(node && node.nodeName === allowedStructure[level]) {   
+        var n = node.nodeType === wysihtml5.ELEMENT_NODE ? node : node.parentNode;
+        
+        if(n && n.nodeName === allowedStructure[level]) {   
           if(allowedStructure[level + 1]) {
-            return validateStructure(node.parentNode, level + 1);
+            return validateStructure(n.parentNode, level + 1);
           } else {
             return true;
           }
@@ -386,7 +388,8 @@
         var 
           order = defaultStructure.slice(0).reverse(),
           topNode = that.doc.createElement(order[0]),
-          node = topNode;
+          node = topNode,
+          textNodeClone = textNode.cloneNode();
         
           for(var i = 1; i < order.length; i++) {
             var 
@@ -402,17 +405,17 @@
           }
           
           // insert text
-          if(textNode.nodeType === wysihtml5.TEXT_NODE) {
-            node.appendChild(textNode);
+          if(textNodeClone.nodeType === wysihtml5.TEXT_NODE) {
+            node.appendChild(textNodeClone);
           } else {
             node.innerHTML = wysihtml5.INVISIBLE_SPACE;
           }
           
           // Always end line with a BR
+          
           if (node.lastChild.nodeName !== "BR") {
             node.appendChild(that.doc.createElement("BR"));
           }
-          
         return topNode;
       }
 
@@ -473,9 +476,13 @@
         return false;
       }
      
+      // Ensure proper html structure
       if(!that.config.useLineBreaks) {        
         dom.observe(this.element, "keyup", function(event) {
-          if (event.ctrlKey) {
+          
+          //console.log("event", event);
+
+          if (event.ctrlKey || event.keyCode === wysihtml5.CTRL_KEY) {
             return;
           }
 
@@ -494,18 +501,29 @@
             // create structure
             var 
               defStructure = createDefaultStructure(caretPosNode),
-              body = that.doc.body;
-            console.log("replace", replace);
+              doc = that.doc,
+              body = doc.body;
+            //console.log("replace", replace);
             
-            // black magic ahead!
-            try {
+            
+            if(replace !== doc) {
+              // any character was inserted
               body.insertBefore(defStructure, replace);
               body.removeChild(replace);
-            } catch (e) {
-              body.appendChild(defStructure);
+            } else {
+              // backspace or delete, no new character was inserted
+              range.insertNode(defStructure);
+              
+              // some browsers insert a <br> in body... remove them
+              for(var i = 0; i < body.childNodes.length; i++) {
+                if(body.childNodes[i].nodeName === "BR") {
+                  body.removeChild(body.childNodes[i]);
+                }
+              }
             }
             
             that.selection.setBefore(defStructure.firstChild.lastChild);
+            //console.log("range", defStructure.firstChild.lastChild, range);
             //selectEmptySpan(defStructure.firstChild);   // TEMP ONLY!
           }
         });
@@ -530,7 +548,7 @@
             }
           }
         });
-      }            
+      }    
       
       // Ensure default markup is in place if
       // content is empty
