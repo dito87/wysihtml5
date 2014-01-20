@@ -39,12 +39,12 @@
         firstNode = undefined,
         lastNode = undefined;  
       
-      for(var i = 0; i < nodes.length; i++) {      
-        // ugly hack if first text node is empty
-        if(nodes[i].data.trim().length <= 0) {
-          continue;
-        }
-        
+      // ugly hack if first text node is empty
+      if(nodes[0] && nodes[0].data.trim().length <= 0) {
+        nodes.splice(0,1);
+      }
+      
+      for(var i = 0; i < nodes.length; i++) {              
         var 
           styleParent = findStyleParent(nodes[i]),
           innerHtml = styleParent === nodes[i].parentNode ? nodes[i].data : styleParent.innerHTML,
