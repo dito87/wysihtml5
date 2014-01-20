@@ -32,19 +32,23 @@
       
       return;
     } else {
+      // TODO: Refactor the following part
       range.splitBoundaries();
-      var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));  
-      for(var i = 0; i < nodes.length; i++) {
+      var 
+        nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE])),
+        firstNode = undefined,
+        lastNode = undefined;  
+      
+      for(var i = 0; i < nodes.length; i++) {      
+        // ugly hack if first text node is empty
+        if(nodes[i].data.trim().length <= 0) {
+          continue;
+        }
+        
         var 
           styleParent = findStyleParent(nodes[i]),
           innerHtml = styleParent === nodes[i].parentNode ? nodes[i].data : styleParent.innerHTML,
           node = createNode(styleParent, innerHtml);
-
-        // Remove orphaned nodes
-        if(styleParent.parentNode === null) {
-          remove(nodes[i]);
-          continue;
-        }
 
         insertBefore(styleParent, node);
 
@@ -57,17 +61,27 @@
           var next = createNode(styleParent, nodes[i].nextSibling.data);
           insertAfter(node, next);
         }
-
-        remove(styleParent);
-
-        if(i === 0) {
-          range.setStartBefore(node);
+        
+        if(firstNode === undefined) {
+          firstNode = node;
         }
 
         if(i === nodes.length - 1) {
-          range.setEndAfter(node);
+          lastNode = node;
         }   
       }
+
+      // remove old
+      for(var i = 0; i < nodes.length; i++) {
+        var styleParent = findStyleParent(nodes[i]);
+        if(styleParent.parentNode !== null) {
+          remove(styleParent);
+        }
+      }
+      
+      // set current range again
+      range.setStartBefore(firstNode);
+      range.setEndAfter(lastNode);
     }
     
     function createNode(parent, innerHtml) {
