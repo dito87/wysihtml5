@@ -345,16 +345,13 @@
           USE_NATIVE_LINE_BREAK_INSIDE_TAGS = ["LI", "P", "H1", "H2", "H3", "H4", "H5", "H6"],
           LIST_TAGS                         = ["UL", "OL", "MENU"];
 
-      /*
-      var allowedStrucure = [
-        ["SPAN", "P", "BODY"],
-        ["SPAN", "LI", "UL", "BODY"],
-        ["SPAN", "LI", "OL", "BODY"]
-      ];
-      */
-     var 
-      allowedStructure = ["SPAN", "P", "BODY"],
-      defaultStructure = ["SPAN", "P"]; // not including body
+      var
+        allowedStructure = [
+          ["SPAN", "P", "BODY"],
+          ["SPAN", "LI", "OL", "BODY"],
+          ["SPAN", "LI", "UL", "BODY"]
+        ],
+        defaultStructure = ["SPAN", "P"]; // not including body
         
       
       function adjust(selectedNode) {
@@ -371,16 +368,31 @@
       }
       
       function validateStructure(node, level) {
-        var n = node.nodeType === wysihtml5.ELEMENT_NODE ? node : node.parentNode;
+        var 
+          n = node.nodeType === wysihtml5.ELEMENT_NODE ? node : node.parentNode,
+          lvl = level || 0;
         
-        if(n && n.nodeName === allowedStructure[level]) {   
-          if(allowedStructure[level + 1]) {
-            return validateStructure(n.parentNode, level + 1);
-          } else {
+        // test all allowed structures. Return true if at least one returned true
+        for(var idx = 0; idx < allowedStructure.length; idx++) {
+          if(doValidate(n, idx, lvl)) {
             return true;
           }
         }
+
+        // recursive validation function
+        function doValidate(n, idx, lvl) {
+          if(n && n.nodeName === allowedStructure[idx][lvl]) {   
+            if(allowedStructure[idx][lvl + 1]) {
+              return doValidate(n.parentNode, idx, lvl + 1);
+            } else {
+              return true;
+            }
+          }
+
+          return false;
+        }
         
+        // structure is invalid at this point
         return false;
       }
       
