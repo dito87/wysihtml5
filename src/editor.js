@@ -65,7 +65,7 @@
     allowedMarkup: [
       ["SPAN", "P", "BODY"]
     ],
-    defaultMarkup: ["SPAN", "P", "BODY"]
+    defaultMarkup: ["SPAN", "P"]
   };
   
   wysihtml5.Editor = wysihtml5.lang.Dispatcher.extend(
