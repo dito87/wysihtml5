@@ -343,16 +343,9 @@
     _initLineBreaking: function() {
       var that                              = this,
           USE_NATIVE_LINE_BREAK_INSIDE_TAGS = ["LI", "P", "H1", "H2", "H3", "H4", "H5", "H6"],
-          LIST_TAGS                         = ["UL", "OL", "MENU"];
-
-      var
-        allowedStructure = [
-          ["SPAN", "P", "BODY"],
-          ["SPAN", "LI", "OL", "BODY"],
-          ["SPAN", "LI", "UL", "BODY"]
-        ],
-        defaultStructure = ["SPAN", "P"]; // not including body
-        
+          LIST_TAGS                         = ["UL", "OL", "MENU"],
+          defaultMarkup = that.config.defaultMarkup,
+          allowedMarkup = that.config.allowedMarkup   
       
       function adjust(selectedNode) {
         var parentElement = dom.getParentElement(selectedNode, { nodeName: ["P", "DIV"] }, 2);
@@ -373,7 +366,7 @@
           lvl = level || 0;
         
         // test all allowed structures. Return true if at least one returned true
-        for(var idx = 0; idx < allowedStructure.length; idx++) {
+        for(var idx = 0; idx < allowedMarkup.length; idx++) {
           if(doValidate(n, idx, lvl)) {
             return true;
           }
@@ -381,8 +374,8 @@
 
         // recursive validation function
         function doValidate(n, idx, lvl) {
-          if(n && n.nodeName === allowedStructure[idx][lvl]) {   
-            if(allowedStructure[idx][lvl + 1]) {
+          if(n && n.nodeName === allowedMarkup[idx][lvl]) {   
+            if(allowedMarkup[idx][lvl + 1]) {
               return doValidate(n.parentNode, idx, lvl + 1);
             } else {
               return true;
@@ -398,7 +391,7 @@
       
       function createDefaultStructure(textNode) {
         var 
-          order = defaultStructure.slice(0).reverse(),
+          order = defaultMarkup.slice(0).reverse(),
           topNode = that.doc.createElement(order[0]),
           node = topNode,
           textNodeClone = textNode.cloneNode();

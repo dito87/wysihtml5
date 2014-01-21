@@ -61,7 +61,11 @@
     // Whether senseless <span> elements (empty or without attributes) should be removed/replaced with their content
     cleanUp:              true,
     // default css class to apply to new elements, elements: class string pairs
-    defaultClassNames: {}
+    defaultClassNames: {},
+    allowedMarkup: [
+      ["SPAN", "P", "BODY"]
+    ],
+    defaultMarkup: ["SPAN", "P", "BODY"]
   };
   
   wysihtml5.Editor = wysihtml5.lang.Dispatcher.extend(
