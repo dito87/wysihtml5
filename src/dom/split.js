@@ -34,15 +34,11 @@
     } else {
       // TODO: Refactor the following part
       range.splitBoundaries();
-      var 
+      concatRangeTextNodes(range);
+      var
         nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE])),
         firstNode = undefined,
         lastNode = undefined;  
-      
-      // ugly hack if first text node is empty
-      if(nodes[0] && nodes[0].data.trim().length <= 0) {
-        nodes.splice(0,1);
-      }
       
       for(var i = 0; i < nodes.length; i++) {              
         var 
@@ -112,6 +108,22 @@
       }
       
       return parent;  
+    }
+    
+    // concat nodes in a range that have the same parent
+    function concatRangeTextNodes(range) {
+      var nodes = range.getNodes([wysihtml5.TEXT_NODE]);
+      
+      for(var i = 1; i < nodes.length; i++) {
+        var
+          prev = nodes[i-1],
+          current = nodes[i]
+        
+        if(prev.parentNode === current.parentNode) {
+          current.data = prev.data += current.data;
+          prev.parentNode.removeChild(prev); 
+        }
+      }
     }
   };
   
