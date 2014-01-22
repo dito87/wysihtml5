@@ -6,6 +6,7 @@ wysihtml5.browser = (function() {
       testElement = document.createElement("div"),
       // Browser sniffing is unfortunately needed since some behaviors are impossible to feature detect
       isIE        = (userAgent.indexOf("MSIE") !== -1 || userAgent.indexOf("Trident") !== -1) && userAgent.indexOf("Opera") === -1,
+      isIE9       = userAgent.indexOf("MSIE 9.0"),
       isGecko     = userAgent.indexOf("Gecko") !== -1 && userAgent.indexOf("KHTML") === -1 && userAgent.indexOf("Trident") === -1,
       isWebKit    = userAgent.indexOf("AppleWebKit/") !== -1,
       isChrome    = userAgent.indexOf("Chrome/") !== -1,
@@ -358,6 +359,10 @@ wysihtml5.browser = (function() {
     
     keepsSelectionOnBlur: function() {
       return !isIE;
+    },
+    
+    needsLineBreakOnEmptyLine: function() {
+      return !isIE9;
     }
   };
 })();

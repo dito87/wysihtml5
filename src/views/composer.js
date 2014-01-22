@@ -418,8 +418,10 @@
           
           // Always end line with a BR
           
-          if (node.lastChild.nodeName !== "BR") {
-            node.appendChild(that.doc.createElement("BR"));
+          if(browser.needsLineBreakOnEmptyLine()) {
+            if (node.lastChild.nodeName !== "BR") {
+              node.appendChild(that.doc.createElement("BR"));
+            }
           }
         return topNode;
       }
@@ -480,6 +482,15 @@
         
         return false;
       }
+      
+      function findDeepLastChild(node) {
+        var current = node;
+        while(current && current.lastChild) {
+          current = current.lastChild;
+        }
+        
+        return current;
+      }
      
       // Ensure proper html structure
       if(!that.config.useLineBreaks) {        
@@ -527,7 +538,13 @@
               }
             }
             
-            that.selection.setBefore(defStructure.firstChild.lastChild);
+            var lastChild = findDeepLastChild(defStructure);
+            if(lastChild.nodeName === "BR") {
+              that.selection.setBefore(lastChild);
+            } else {
+              that.selection.setAfter(lastChild);
+            }
+            //that.selection.setBefore(defStructure.firstChild.lastChild);
             //console.log("range", defStructure.firstChild.lastChild, range);
             //selectEmptySpan(defStructure.firstChild);   // TEMP ONLY!
           }
