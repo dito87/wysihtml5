@@ -48,14 +48,23 @@
 
         insertBefore(styleParent, node);
 
-        if(nodes[i].previousSibling !== null && nodes[i].previousSibling.data !== undefined) {
-          var prev = createNode(styleParent, nodes[i].previousSibling.data);
-          insertBefore(node, prev);
+        var prevs = findSiblings(nodes[i], "previous");
+        if(prevs.length > 0) {
+          prevs.reverse();
+          var text = prevs.map(function(v) {
+            return v.data;
+          }).join("");
+          
+          insertBefore(node, createNode(styleParent, text));
         }
 
-        if(nodes[i].nextSibling !== null && nodes[i].nextSibling.data !== undefined) {
-          var next = createNode(styleParent, nodes[i].nextSibling.data);
-          insertAfter(node, next);
+        var nexts = findSiblings(nodes[i], "next");
+        if(nexts.length > 0) {
+          var text = nexts.map(function(v) {
+            return v.data;
+          }).join("");
+          
+          insertAfter(node, createNode(styleParent, text));
         }
         
         if(firstNode === undefined) {
@@ -112,7 +121,7 @@
     
     // concat nodes in a range that have the same parent
     function concatRangeTextNodes(range) {
-      var nodes = range.getNodes([wysihtml5.TEXT_NODE]);
+      var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));
       
       for(var i = 1; i < nodes.length; i++) {
         var
@@ -124,6 +133,20 @@
           prev.parentNode.removeChild(prev); 
         }
       }
+    }
+    
+    function findSiblings(node, dir) {
+      var 
+        direction = dir + "Sibling",
+        siblings = [],
+        sib = node[direction];
+
+      while(sib) {
+        siblings.push(sib);
+        sib = sib[direction];
+      }
+      
+      return siblings;
     }
   };
   
