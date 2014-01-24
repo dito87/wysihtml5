@@ -188,22 +188,22 @@
         target.setAttribute("title", title);
       }
     });
-    
+        
     // --------- Save selection on blur ---------
     if (!browser.keepsSelectionOnBlur()) {
       var restoreSelection;
       dom.observe(element, "beforedeactivate", function(event) {
         restoreSelection = rangy.saveSelection(that.iframe.contentWindow);
-        
-        setTimeout(function() {
-        if(restoreSelection !== undefined) {
-          rangy.restoreSelection(restoreSelection);
-          restoreSelection = undefined;
-        }
-      }, 20);
       });
 
-      
+      dom.observe(element, "blur", function(event) {
+        setTimeout(function() {
+          if(restoreSelection !== undefined) {
+            rangy.restoreSelection(restoreSelection);
+            restoreSelection = undefined;
+          }
+        }, 0);
+      });
     }
   };
   
