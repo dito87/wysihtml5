@@ -504,7 +504,8 @@
 
           var 
             range = that.selection.getRange(),
-            caretPosNode = range.endContainer;
+            caretPosNode = range.endContainer,
+            parentSpanNode = dom.getParentElement(caretPosNode, { nodeName: 'SPAN' }, 2);
             
           if(!validateStructure(caretPosNode, 0)) {
             // insert default structure here
@@ -547,6 +548,13 @@
             //that.selection.setBefore(defStructure.firstChild.lastChild);
             //console.log("range", defStructure.firstChild.lastChild, range);
             //selectEmptySpan(defStructure.firstChild);   // TEMP ONLY!
+          } else if (!isEmptyLine(parentSpanNode)) {
+            var brs = parentSpanNode? parentSpanNode.getElementsByTagName('br') : [];
+            for (var i = 0; i < brs.length; i++) {
+              brs[i].remove();
+            }
+          } else if (isEmptyLine(parentSpanNode) && parentSpanNode.getElementsByTagName('br').length === 0) {
+            parentSpanNode.appendChild(that.doc.createElement("BR"));
           }
         });
         
