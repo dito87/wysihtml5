@@ -6,7 +6,7 @@
  *  - Dispatch proprietary newword:composer event
  *  - Keyboard shortcuts
  */
-(function(wysihtml5, rangy) {
+(function(wysihtml5) {
   var dom       = wysihtml5.dom,
       browser   = wysihtml5.browser,
       /**
@@ -209,20 +209,20 @@
         
     // --------- Save selection on blur ---------
     if (!browser.keepsSelectionOnBlur()) {
-      var restoreSelection;
+      var range;
       dom.observe(element, "beforedeactivate", function(event) {
-        restoreSelection = rangy.saveSelection(that.iframe.contentWindow);
+        range = that.selection.getRange();
       });
 
       dom.observe(element, "blur", function(event) {
         setTimeout(function() {
-          if(restoreSelection !== undefined) {
-            rangy.restoreSelection(restoreSelection);
-            restoreSelection = undefined;
+          if(range) {
+            that.selection.setSelection(range);
+            range = undefined;
           }
         }, 0);
       });
     }
   };
   
-})(wysihtml5, rangy);
+})(wysihtml5);
