@@ -210,15 +210,19 @@
     // --------- Save selection on blur ---------
     if (!browser.keepsSelectionOnBlur()) {
       var range;
-      dom.observe(element, "beforedeactivate", function(event) {
+      
+      /**
+       * Save selection on every caret change. Apply range again
+       * in the following blur event.
+       */
+      dom.observe(element, ["keyup", "mouseup", "beforedeactivate"], function() {
         range = that.selection.getRange();
       });
 
-      dom.observe(element, "blur", function(event) {
+      dom.observe(element, "blur", function() {
         setTimeout(function() {
           if(range) {
             that.selection.setSelection(range);
-            range = undefined;
           }
         }, 0);
       });
