@@ -178,10 +178,12 @@
   };
   
   function removeUnselectedBoundaryTextNodes(range, textNodes) {
-    if(!range.collapsed && range.startOffset === textNodes[0].length) {
+    var firstNode = textNodes[0]? textNodes[0].parentNode : [],
+        lastNode = textNodes[textNodes.length - 1]? textNodes[textNodes.length - 1] : [];
+    if(!range.collapsed && (firstNode.length > 1 && range.startOffset === textNodes[0].length)) {
       textNodes.splice(0,1);
     }
-    if(!range.collapsed && range.endOffset === 0) {
+    if(!range.collapsed && (lastNode.length > 1 && range.endOffset === 0)) {
       textNodes.splice(textNodes.length - 1, 1);
     }
     return textNodes;
