@@ -528,9 +528,13 @@
               body.insertBefore(defStructure, replace);
               body.removeChild(replace);
             } else {
-              // backspace or delete, no new character was inserted
-              range.insertNode(defStructure);
-              
+              if(body.firstChild && body.firstChild.nodeName === "P") {
+                // ctrl, meta + character. Return here.
+                return;
+              } else {
+                // backspace or delete, no new character was inserted
+                range.insertNode(defStructure);
+              }
               // some browsers insert a <br> in body... remove them
               for(var i = 0; i < body.childNodes.length; i++) {
                 if(body.childNodes[i].nodeName === "BR") {
