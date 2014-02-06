@@ -43,7 +43,7 @@
     var children = [];
     
     for(var i = 0; i < node.childNodes.length; i++) {      
-      if(types.indexOf(node.childNodes[i].nodeType) >= 0) {
+      if(types.indexOf(node.childNodes[i].nodeType) >= 0 && !hasClass(node.childNodes[i], "_wysihtml5-temp-placeholder")) {
         children.push(node.childNodes[i]);
       }
     }
@@ -63,6 +63,10 @@
     }
     
     return cl1.join(" ");
+  }
+  
+  function hasClass(node, cl) {
+    return node.className.indexOf(cl) > -1;
   }
   
 })(wysihtml5);

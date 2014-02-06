@@ -276,6 +276,8 @@ wysihtml5.dom.parse = (function() {
       rule = typeof(rule) === "string" ? { rename_tag: rule } : rule;
     } else if (oldNode.firstChild) {
       rule = { rename_tag: DEFAULT_NODE_NAME };
+    } else if (oldNode.nodeName.toLowerCase() === "br" && oldNode.parentNode.nodeName.toLowerCase() === DEFAULT_NODE_NAME){
+      rule = { rename_tag: "br" };
     } else {
       // Remove empty unknown elements
       return null;
