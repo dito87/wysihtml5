@@ -461,27 +461,22 @@
       // ugly as hell but had no better idea to check if line is
       // empty or not.
       function isEmptyLine(node) {
-        if(node.firstChild) {
-          var n1 = node.firstChild;
-          if(n1 && n1.nodeName === "BR") {
-            return true;
-          }
+        var 
+          lastChild = findDeepLastChild(node),
+          parent = lastChild.parentNode,
+          inner = parent.innerHTML;
+  
+          //console.log("inner", inner, parent);
+          var retVal = 
+            (parent.firstChild && parent.firstChild.nodeName === "BR") ||
+            inner === "" ||
+            inner === wysihtml5.INVISIBLE_SPACE ||
+            inner === wysihtml5.INVISIBLE_SPACE + "<br>" || 
+            inner === "<br>";
           
-          var n2 = n1.firstChild;
-          if(n2 && n2.nodeName === "SPAN") {
-            var n3 = n2.firstChild;
-            if(
-              n3.nodeType === wysihtml5.TEXT_NODE 
-              && n3.data === wysihtml5.INVISIBLE_SPACE
-              && n3.nextSibling && n3.nextSibling.nodeName === "BR"
-            ) {
-              return true;
-            }
-          }
-        }
-        
-        return false;
+          return retVal;
       }
+
       
       function findDeepLastChild(node) {
         var current = node;
@@ -557,7 +552,7 @@
             for (var i = 0; i < brs.length; i++) {
               brs[i].remove();
             }
-          } else if (isEmptyLine(parentSpanNode) && parentSpanNode.getElementsByTagName('br').length === 0) {
+          } else if (browser.needsLineBreakOnEmptyLine() && isEmptyLine(parentSpanNode) && parentSpanNode.getElementsByTagName('br').length === 0) {
             parentSpanNode.appendChild(that.doc.createElement("BR"));
           }
         });

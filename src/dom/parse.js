@@ -211,6 +211,7 @@ wysihtml5.dom.parse = (function() {
     }
     
     // Cleanup senseless <span> elements
+    /*
     if (cleanUp &&
         newNode.nodeName.toLowerCase() === DEFAULT_NODE_NAME &&
         (!newNode.childNodes.length || !newNode.attributes.length)) {
@@ -219,7 +220,7 @@ wysihtml5.dom.parse = (function() {
         fragment.appendChild(newNode.firstChild);
       }
       return fragment;
-    }
+    }*/
     
     return newNode;
   }
