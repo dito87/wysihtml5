@@ -464,15 +464,19 @@
         var 
           lastChild = findDeepLastChild(node),
           parent = lastChild.parentNode,
-          inner = parent.innerHTML;
+          inner = parent.innerHTML,
+          isEmptyLineBySelector = that.config.nonEmptyLineSelectors?
+              node.querySelector(that.config.nonEmptyLineSelectors.join()) === null
+              :true;
   
           //console.log("inner", inner, parent);
           var retVal = 
+            isEmptyLineBySelector && (
             (parent.firstChild && parent.firstChild.nodeName === "BR") ||
             inner === "" ||
             inner === wysihtml5.INVISIBLE_SPACE ||
             inner === wysihtml5.INVISIBLE_SPACE + "<br>" || 
-            inner === "<br>";
+            inner === "<br>");
           
           return retVal;
       }
@@ -569,7 +573,7 @@
               p = findParentParagraph(range.commonAncestorContainer);
             
             // only if text, do nothing if elment is list etc...
-            if(p && p.previousSibling && isEmptyLine(p.previousSibling)) {
+            if(p && p.previousSibling && p.previousSibling !== null && isEmptyLine(p.previousSibling)) {
               var 
                 prev = p.previousSibling,
                 span = insertDefaultContent(prev);
