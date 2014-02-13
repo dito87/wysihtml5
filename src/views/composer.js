@@ -504,7 +504,7 @@
           var 
             range = that.selection.getRange(),
             caretPosNode = range.endContainer,
-            parentSpanNode = dom.getParentElement(caretPosNode, { nodeName: 'SPAN' }, 2);
+            parentSpanNode = dom.getParentElement(caretPosNode, { nodeName: 'SPAN' }, 10);
             
           if(!validateStructure(caretPosNode, 0)) {
             // insert default structure here
