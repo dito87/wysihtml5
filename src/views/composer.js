@@ -461,23 +461,19 @@
       // ugly as hell but had no better idea to check if line is
       // empty or not.
       function isEmptyLine(node) {
+        
         var 
-          lastChild = findDeepLastChild(node),
-          parent = lastChild.parentNode,
-          inner = parent.innerHTML,
+          parentParagraph = dom.getParentElement(node, { nodeName: 'P' }, 10),
+          trimmedText = parentParagraph.textContent.trim(),
           isEmptyLineBySelector = that.config.nonEmptyLineSelectors?
-              node.querySelector(that.config.nonEmptyLineSelectors.join()) === null
+              parentParagraph.querySelector(that.config.nonEmptyLineSelectors.join()) === null
               :true;
   
           //console.log("inner", inner, parent);
-          var retVal = 
-            isEmptyLineBySelector && (
-            (parent.firstChild && parent.firstChild.nodeName === "BR") ||
-            inner === "" ||
-            inner === wysihtml5.INVISIBLE_SPACE ||
-            inner === wysihtml5.INVISIBLE_SPACE + "<br>" || 
-            inner === "<br>");
-          
+          var retVal = isEmptyLineBySelector 
+                  && (trimmedText === "" ||
+                      trimmedText === wysihtml5.INVISIBLE_SPACE);
+
           return retVal;
       }
 
