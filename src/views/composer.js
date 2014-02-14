@@ -548,13 +548,6 @@
             //that.selection.setBefore(defStructure.firstChild.lastChild);
             //console.log("range", defStructure.firstChild.lastChild, range);
             //selectEmptySpan(defStructure.firstChild);   // TEMP ONLY!
-          } else if (!isEmptyLine(parentSpanNode)) {
-            var brs = parentSpanNode? parentSpanNode.getElementsByTagName('br') : [];
-            for (var i = 0; i < brs.length; i++) {
-              brs[i].remove();
-            }
-          } else if (browser.needsLineBreakOnEmptyLine() && isEmptyLine(parentSpanNode) && parentSpanNode.getElementsByTagName('br').length === 0) {
-            parentSpanNode.appendChild(that.doc.createElement("BR"));
           }
         });
         
