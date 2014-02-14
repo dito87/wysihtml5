@@ -465,6 +465,7 @@
         var 
           parentParagraph = dom.getParentElement(node, { nodeName: 'P' }, 10),
           trimmedText = parentParagraph.textContent.trim(),
+          testInvisibleRegex = new RegExp('^' + wysihtml5.INVISIBLE_SPACE + '+$'),
           isEmptyLineBySelector = that.config.nonEmptyLineSelectors?
               parentParagraph.querySelector(that.config.nonEmptyLineSelectors.join()) === null
               :true;
@@ -472,7 +473,7 @@
           //console.log("inner", inner, parent);
           var retVal = isEmptyLineBySelector 
                   && (trimmedText === "" ||
-                      trimmedText === wysihtml5.INVISIBLE_SPACE);
+                      testInvisibleRegex.test(trimmedText));
 
           return retVal;
       }
