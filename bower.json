@@ -13,7 +13,8 @@
   "license": "MIT",
   "private": true,
   "ignore": [
-    "**/*",
-    "!./dist/*"
+    "/*",
+    "/.*",
+    "!dist/*"
   ]
 }
