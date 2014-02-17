@@ -29,6 +29,7 @@ var wysihtml5 = {
   
   BACKSPACE_KEY:  8,
   ENTER_KEY:      13,
+  CTRL_KEY:       17,
   ESCAPE_KEY:     27,
   SPACE_KEY:      32,
   DELETE_KEY:     46
@@ -3388,11 +3389,12 @@ wysihtml5.browser = (function() {
   var userAgent   = navigator.userAgent,
       testElement = document.createElement("div"),
       // Browser sniffing is unfortunately needed since some behaviors are impossible to feature detect
-      isIE        = userAgent.indexOf("MSIE")         !== -1 && userAgent.indexOf("Opera") === -1,
-      isGecko     = userAgent.indexOf("Gecko")        !== -1 && userAgent.indexOf("KHTML") === -1,
+      isIE        = (userAgent.indexOf("MSIE") !== -1 || userAgent.indexOf("Trident") !== -1) && userAgent.indexOf("Opera") === -1,
+      isIE9       = userAgent.indexOf("MSIE 9.0"),
+      isGecko     = userAgent.indexOf("Gecko") !== -1 && userAgent.indexOf("KHTML") === -1 && userAgent.indexOf("Trident") === -1,
       isWebKit    = userAgent.indexOf("AppleWebKit/") !== -1,
-      isChrome    = userAgent.indexOf("Chrome/")      !== -1,
-      isOpera     = userAgent.indexOf("Opera/")       !== -1;
+      isChrome    = userAgent.indexOf("Chrome/") !== -1,
+      isOpera     = userAgent.indexOf("Opera/") !== -1;
   
   function iosVersion(userAgent) {
     return +((/ipad|iphone|ipod/.test(userAgent) && userAgent.match(/ os (\d+).+? like mac os x/)) || [, 0])[1];
@@ -3485,7 +3487,7 @@ wysihtml5.browser = (function() {
      * Firefox on OSX navigates through history when hitting CMD + Arrow right/left
      */
     hasHistoryIssue: function() {
-      return isGecko;
+      return isGecko && navigator.platform.substr(0, 3) === "Mac";
     },
 
     /**
@@ -3725,6 +3727,26 @@ wysihtml5.browser = (function() {
      */
     hasIframeFocusIssue: function() {
       return isIE;
+    },
+    
+    /**
+     * Chrome + Safari create invalid nested markup after paste
+     * 
+     *  <p>
+     *    foo
+     *    <p>bar</p> <!-- BOO! -->
+     *  </p>
+     */
+    createsNestedInvalidMarkupAfterPaste: function() {
+      return isWebKit;
+    },
+    
+    keepsSelectionOnBlur: function() {
+      return !isIE;
+    },
+    
+    needsLineBreakOnEmptyLine: function() {
+      return !isIE9;
     }
   };
 })();wysihtml5.lang.array = function(arr) {
@@ -3876,7 +3898,14 @@ wysihtml5.browser = (function() {
   };
 };(function() {
   var WHITE_SPACE_START = /^\s+/,
-      WHITE_SPACE_END   = /\s+$/;
+      WHITE_SPACE_END   = /\s+$/,
+      ENTITY_REG_EXP    = /[&<>"]/g,
+      ENTITY_MAP = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': "&quot;"
+      };
   wysihtml5.lang.string = function(str) {
     str = String(str);
     return {
@@ -3912,6 +3941,15 @@ wysihtml5.browser = (function() {
             return str.split(search).join(replace);
           }
         };
+      },
+      
+      /**
+       * @example
+       *    wysihtml5.lang.string("hello<br>").escapeHTML();
+       *    // => "hello&lt;br&gt;"
+       */
+      escapeHTML: function() {
+        return str.replace(ENTITY_REG_EXP, function(c) { return ENTITY_MAP[c]; });
       }
     };
   };
@@ -4002,11 +4040,12 @@ wysihtml5.browser = (function() {
    */
   function _wrapMatchesInNode(textNode) {
     var parentNode  = textNode.parentNode,
+        nodeValue   = wysihtml5.lang.string(textNode.data).escapeHTML(),
         tempElement = _getTempElement(parentNode.ownerDocument);
     
     // We need to insert an empty/temporary <span /> to fix IE quirks
     // Elsewise IE would strip white space in the beginning
-    tempElement.innerHTML = "<span></span>" + _convertUrlsToLinks(textNode.data);
+    tempElement.innerHTML = "<span></span>" + _convertUrlsToLinks(nodeValue);
     tempElement.removeChild(tempElement.firstChild);
     
     while (tempElement.firstChild) {
@@ -4339,6 +4378,77 @@ wysihtml5.dom.copyAttributes = function(attributesToCopy) {
   };
   
 })(wysihtml5);/**
+ * Flatten dom structure
+ */
+(function(wysihtml5) {
+  
+  wysihtml5.dom.flatten = function(body) {
+    var firstLevelElements = body.childNodes;
+    
+    for(var i = 0; i < firstLevelElements.length; i++) {
+      doFlatten(firstLevelElements[i]);
+    }
+  };
+  
+  function doFlatten(node) {
+    var children = getChildNodes(node, [wysihtml5.ELEMENT_NODE]);
+    
+    if(children.length > 0) {
+      for(var i = 0; i < children.length; i++) {
+        doFlatten(children[i]);
+      }
+      return;
+    }
+    
+   
+    var
+      currentNode = node,
+      parentNode = node.parentNode;
+    while(parentNode.nodeName === currentNode.nodeName) {      
+      var
+        currentClass = currentNode.className,
+        parentClass = parentNode.className,
+        mergedClass = mergeClassNames(currentClass, parentClass);
+        
+        parentNode.className = mergedClass;
+        parentNode.innerHTML = currentNode.innerHTML;
+        
+        currentNode = parentNode;
+        parentNode = currentNode.parentNode;
+    }
+  }
+  
+  function getChildNodes(node, types) {
+    var children = [];
+    
+    for(var i = 0; i < node.childNodes.length; i++) {      
+      if(types.indexOf(node.childNodes[i].nodeType) >= 0 && !hasClass(node.childNodes[i], "_wysihtml5-temp-placeholder")) {
+        children.push(node.childNodes[i]);
+      }
+    }
+    
+    return children;
+  }
+  
+  function mergeClassNames(class1, class2) {
+    var
+      cl1 = class1.trim().split(" "),
+      cl2 = class2.trim().split(" ");
+      
+    for(var i = 0; i < cl2.length; i++) {
+      if(cl1.indexOf(cl2[i]) < 0) {
+        cl1.push(cl2[i]);
+      }
+    }
+    
+    return cl1.join(" ");
+  }
+  
+  function hasClass(node, cl) {
+    return node.className.indexOf(cl) > -1;
+  }
+  
+})(wysihtml5);/**
  * Returns the given html wrapped in a div element
  *
  * Fixing IE's inability to treat unknown elements (HTML5 section, article, ...) correctly
@@ -4650,6 +4760,11 @@ wysihtml5.dom.insert = function(elementToInsert) {
       }
     }
   };
+};wysihtml5.dom.moveElements = function(to, elements) {
+  for(var i = 0; i < elements.length; i++) {
+    var element = elements[i];
+    to.appendChild(element.parentNode.removeChild(element));
+  }
 };/**
  * Method to set dom events
  *
@@ -4775,15 +4890,20 @@ wysihtml5.dom.parse = (function() {
    * Iterates over all childs of the element, recreates them, appends them into a document fragment
    * which later replaces the entire body content
    */
-  function parse(elementOrHtml, rules, context, cleanUp) {
-    wysihtml5.lang.object(currentRules).merge(defaultRules).merge(rules).get();
+  function parse(elementOrHtml, config, context) {
+    var
+      rules = config.parserRules,
+      cleanUp = config.cleanUp;
     
+    wysihtml5.lang.object(currentRules).merge(defaultRules).merge(rules).get();
+        
     context           = context || elementOrHtml.ownerDocument || document;
     var fragment      = context.createDocumentFragment(),
         isString      = typeof(elementOrHtml) === "string",
         element,
         newNode,
-        firstChild;
+        firstChild,
+        defaultClass  = config.defaultClassNames;
     
     if (isString) {
       element = wysihtml5.dom.getAsDom(elementOrHtml, context);
@@ -4791,10 +4911,16 @@ wysihtml5.dom.parse = (function() {
       element = elementOrHtml;
     }
     
+    // remove emty text nodes from pasted content
+    // INFO: We don't need to support rich formats from outside the editor,
+    // we only support the plain text so if there's an empty space we don't want
+    // to remove it.
+//    _removeEmptyTextNodes(element);
+    
     while (element.firstChild) {
-      firstChild  = element.firstChild;
-      element.removeChild(firstChild);
+      firstChild = element.firstChild;
       newNode = _convert(firstChild, cleanUp);
+      element.removeChild(firstChild);
       if (newNode) {
         fragment.appendChild(newNode);
       }
@@ -4806,7 +4932,80 @@ wysihtml5.dom.parse = (function() {
     // Insert new DOM tree
     element.appendChild(fragment);
     
+    _wrapTextNodes(element, defaultClass, context);
+    _wrapBodySpans(element, context);
+    wysihtml5.dom.flatten(element);
     return isString ? wysihtml5.quirks.getCorrectInnerHTML(element) : element;
+  }
+  
+  function _wrapBodySpans(node, context) {
+    var children = node.childNodes;
+    for(var i = 0; i < children.length; i++) {
+      if(children[i].nodeName === "SPAN") {
+        var 
+          span = children[i],
+          p = context.createElement("P");
+  
+        p.appendChild(span.cloneNode(true));
+        
+        span.parentElement.replaceChild(p, span);
+      }
+    }
+  }
+  
+  /**
+   * Wrap all text nodes in a span. If text node is a line break, insert
+   * a br.
+   * 
+   * @param {type} node iterate over all child nodes
+   * @param {type} context document
+   * @returns {undefined}
+   */
+  function _wrapTextNodes(node, defaultClass, context) {
+    if(node.nodeType !== wysihtml5.TEXT_NODE) {
+      for(var i = 0; i < node.childNodes.length; i++) {
+        _wrapTextNodes(node.childNodes[i], defaultClass, context);
+      }
+    }
+    else if(node.parentNode.nodeName !== "SPAN") {
+      var 
+        element = node.data.trim().length > 0 
+          ? context.createElement("SPAN")
+          : context.createElement("BR"),
+        nodeName = element.nodeName.toLowerCase();
+      
+      if(defaultClass[nodeName]) {
+        element.className = defaultClass[nodeName];
+      }
+      
+      if(node.nextSibling) {
+        node.parentNode.insertBefore(element, node.nextSibling);
+      }
+      else {
+        node.parentNode.appendChild(element);
+      }
+      
+      node.data = node.data.trim();
+      element.appendChild(node);
+    }
+  }
+  
+  /**
+   * Remove empty text node.
+   * @param {type} node iterate over all child nodes
+   * @returns {undefined}
+   */
+  function _removeEmptyTextNodes(node) {
+    if(node.nodeType !== wysihtml5.TEXT_NODE) {
+      for(var i = 0; i < node.childNodes.length; i++) {
+        _removeEmptyTextNodes(node.childNodes[i]);
+      }
+    }
+    else {
+      if(node.data.trim().length <= 0) {
+        node.parentNode.removeChild(node);
+      }
+    }
   }
   
   function _convert(oldNode, cleanUp) {
@@ -4815,6 +5014,7 @@ wysihtml5.dom.parse = (function() {
         oldChildsLength = oldChilds.length,
         method          = NODE_TYPE_MAPPING[oldNodeType],
         i               = 0,
+        fragment,
         newNode,
         newChild;
     
@@ -4832,12 +5032,16 @@ wysihtml5.dom.parse = (function() {
     }
     
     // Cleanup senseless <span> elements
+    /*
     if (cleanUp &&
-        newNode.childNodes.length <= 1 &&
         newNode.nodeName.toLowerCase() === DEFAULT_NODE_NAME &&
-        !newNode.attributes.length) {
-      return newNode.firstChild;
-    }
+        (!newNode.childNodes.length || !newNode.attributes.length)) {
+      fragment = newNode.ownerDocument.createDocumentFragment();
+      while (newNode.firstChild) {
+        fragment.appendChild(newNode.firstChild);
+      }
+      return fragment;
+    }*/
     
     return newNode;
   }
@@ -4894,6 +5098,8 @@ wysihtml5.dom.parse = (function() {
       rule = typeof(rule) === "string" ? { rename_tag: rule } : rule;
     } else if (oldNode.firstChild) {
       rule = { rename_tag: DEFAULT_NODE_NAME };
+    } else if (oldNode.nodeName.toLowerCase() === "br" && oldNode.parentNode.nodeName.toLowerCase() === DEFAULT_NODE_NAME){
+      rule = { rename_tag: "br" };
     } else {
       // Remove empty unknown elements
       return null;
@@ -4908,7 +5114,9 @@ wysihtml5.dom.parse = (function() {
   
   function _handleAttributes(oldNode, newNode, rule) {
     var attributes          = {},                         // fresh new set of attributes to set on newNode
-        setClass            = rule.set_class,             // classes to set
+        setClass            = typeof rule.set_class !== "string" // classes to set
+                                ? rule.set_class
+                                : [rule.set_class],
         addClass            = rule.add_class,             // add classes based on existing attributes
         setAttributes       = rule.set_attributes,        // attributes to set on the current node
         checkAttributes     = rule.check_attributes,      // check/convert values of attributes
@@ -4944,7 +5152,9 @@ wysihtml5.dom.parse = (function() {
     }
     
     if (setClass) {
-      classes.push(setClass);
+      for(var j = 0; j < setClass.length; j++) {
+        classes.push(setClass[j]);
+      }
     }
     
     if (addClass) {
@@ -4975,7 +5185,7 @@ wysihtml5.dom.parse = (function() {
         newClasses.push(currentClass);
       }
     }
-    
+        
     // remove duplicate entries and preserve class specificity
     newClassesLength = newClasses.length;
     while (newClassesLength--) {
@@ -4984,7 +5194,7 @@ wysihtml5.dom.parse = (function() {
         newUniqueClasses.unshift(currentClass);
       }
     }
-    
+        
     if (newUniqueClasses.length) {
       attributes["class"] = newUniqueClasses.join(" ");
     }
@@ -5054,8 +5264,17 @@ wysihtml5.dom.parse = (function() {
     }
   }
   
+  var INVISIBLE_SPACE_REG_EXP = /\uFEFF/g;
   function _handleText(oldNode) {
-    return oldNode.ownerDocument.createTextNode(oldNode.data);
+    var nextSibling = oldNode.nextSibling;
+    if (nextSibling && nextSibling.nodeType === wysihtml5.TEXT_NODE) {
+      // Concatenate text nodes
+      nextSibling.data = oldNode.data + nextSibling.data;
+    } else {
+      // \uFEFF = wysihtml5.INVISIBLE_SPACE (used as a hack in certain rich text editing situations)
+      var data = oldNode.data.replace(INVISIBLE_SPACE_REG_EXP, "");
+      return oldNode.ownerDocument.createTextNode(data);
+    } 
   }
   
   
@@ -5460,7 +5679,6 @@ wysihtml5.dom.replaceWithChildNodes = function(node) {
           iframe = doc.createElement("iframe");
       iframe.className = "wysihtml5-sandbox";
       wysihtml5.dom.setAttributes({
-        "security":           "restricted",
         "allowtransparency":  "true",
         "frameborder":        0,
         "width":              0,
@@ -5672,7 +5890,216 @@ wysihtml5.dom.replaceWithChildNodes = function(node) {
     set();
   };
 })(wysihtml5.dom);
-(function(dom) {
+/**
+ * Split nodes
+ */
+(function(wysihtml5, rangy) {
+
+  function splitBoundaries(range) {
+    if(range.collapsed) {
+      var 
+        textNode = range.startContainer,
+        startOffset = range.startOffset;
+      
+      if(textNode.nodeType !== wysihtml5.TEXT_NODE) {
+        insertInvisibleSpaceIfEmpty(textNode, range);
+        textNode = textNode.firstChild;
+        startOffset = textNode.length;
+      }
+
+      var
+        parent = textNode.parentNode,
+        newNode = splitNodeAt(parent, textNode, startOffset),
+        cloneNode = newNode.cloneNode();
+
+      cloneNode.innerHTML = wysihtml5.INVISIBLE_SPACE;
+      range.collapseBefore(newNode);
+      range.insertNode(cloneNode);
+      range.selectNode(cloneNode.firstChild);
+      range.collapse();
+      
+      if(cloneNode.nextSibling) {
+        insertInvisibleSpaceIfEmpty(cloneNode.nextSibling, range);        
+      }
+      
+      return;
+    } else {
+      // TODO: Refactor the following part
+      range.splitBoundaries();
+      concatRangeTextNodes(range);
+      var
+        nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE])),
+        firstNode = undefined,
+        lastNode = undefined;  
+      
+      for(var i = 0; i < nodes.length; i++) {              
+        var 
+          styleParent = findStyleParent(nodes[i]),
+          innerHtml = styleParent === nodes[i].parentNode ? nodes[i].data : styleParent.innerHTML,
+          node = createNode(styleParent, innerHtml);
+
+        insertBefore(styleParent, node);
+
+        var prevs = findSiblings(nodes[i], "previous");
+        if(prevs.length > 0) {
+          prevs.reverse();
+          var text = prevs.map(function(v) {
+            return v.data;
+          }).join("");
+          
+          insertBefore(node, createNode(styleParent, text));
+        }
+
+        var nexts = findSiblings(nodes[i], "next");
+        if(nexts.length > 0) {
+          var text = nexts.map(function(v) {
+            return v.data;
+          }).join("");
+          
+          insertAfter(node, createNode(styleParent, text));
+        }
+        
+        if(firstNode === undefined) {
+          firstNode = node;
+        }
+
+        if(i === nodes.length - 1) {
+          lastNode = node;
+        }   
+      }
+
+      // remove old
+      for(var i = 0; i < nodes.length; i++) {
+        var styleParent = findStyleParent(nodes[i]);
+        if(styleParent.parentNode !== null) {
+          remove(styleParent);
+        }
+      }
+      
+      // set current range again
+      range.setStartBefore(firstNode);
+      range.setEndAfter(lastNode);
+    }
+    
+    function createNode(parent, innerHtml) {
+      var el = parent.cloneNode();
+      el.innerHTML = innerHtml;
+      return el;
+    }
+
+    function insertBefore(ref, node) {
+      ref.parentNode.insertBefore(node, ref);
+    }
+
+    function insertAfter(ref, node) {
+      ref.parentNode.insertBefore(node, ref.nextSibling);
+    }
+    
+    function remove(el) {
+      el.parentNode.removeChild(el);
+    }
+    
+    function findStyleParent(node) {
+      var 
+        nodeName = "SPAN",
+        parent = node.parentNode;
+        
+      while(parent !== null && parent.nodeName !== nodeName) {
+        parent = parent.parentNode;
+      }
+      
+      return parent;  
+    }
+    
+    // concat nodes in a range that have the same parent
+    function concatRangeTextNodes(range) {
+      var nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE]));
+      
+      for(var i = 1; i < nodes.length; i++) {
+        var
+          prev = nodes[i-1],
+          current = nodes[i]
+        
+        if(prev.parentNode === current.parentNode) {
+          current.data = prev.data += current.data;
+          prev.parentNode.removeChild(prev); 
+        }
+      }
+    }
+    
+    function findSiblings(node, dir) {
+      var 
+        direction = dir + "Sibling",
+        siblings = [],
+        sib = node[direction];
+
+      while(sib) {
+        siblings.push(sib);
+        sib = sib[direction];
+      }
+      
+      return siblings;
+    }
+  };
+  
+  function splitNodeAt(node, descendantNode, descendantOffset) {
+    var newNode;
+    if (rangy.dom.isCharacterDataNode(descendantNode)) {
+      if (descendantOffset == 0) {
+        descendantOffset = rangy.dom.getNodeIndex(descendantNode);
+        descendantNode = descendantNode.parentNode;
+      } else if (descendantOffset == descendantNode.length) {
+        descendantOffset = rangy.dom.getNodeIndex(descendantNode) + 1;
+        descendantNode = descendantNode.parentNode;
+      } else {
+        newNode = rangy.dom.splitDataNode(descendantNode, descendantOffset);
+      }
+    }
+    if (!newNode) {
+      newNode = descendantNode.cloneNode(false);
+      if (newNode.id) {
+        newNode.removeAttribute("id");
+      }
+      var child;
+      while ((child = descendantNode.childNodes[descendantOffset])) {
+        newNode.appendChild(child);
+      }
+      rangy.dom.insertAfter(newNode, descendantNode);
+    }
+    return (descendantNode == node) ? newNode : splitNodeAt(node, newNode.parentNode, rangy.dom.getNodeIndex(newNode));
+  };
+  
+  function removeUnselectedBoundaryTextNodes(range, textNodes) {
+    var firstNode = textNodes[0]? textNodes[0].parentNode : [],
+        lastNode = textNodes[textNodes.length - 1]? textNodes[textNodes.length - 1] : [];
+    if(!range.collapsed && (firstNode.length > 1 && range.startOffset === textNodes[0].length)) {
+      textNodes.splice(0,1);
+    }
+    if(!range.collapsed && (lastNode.length > 1 && range.endOffset === 0)) {
+      textNodes.splice(textNodes.length - 1, 1);
+    }
+    return textNodes;
+  };
+   
+  function insertInvisibleSpaceIfEmpty(node, range) {
+    if(!node.firstChild) {
+      node.innerHTML = wysihtml5.INVISIBLE_SPACE;
+    }
+    else if(node.firstChild.nodeType !== wysihtml5.TEXT_NODE) {
+      var 
+        doc = range.getDocument(),
+        invisibleNode = doc.createTextNode(wysihtml5.INVISIBLE_SPACE);
+
+      node.insertBefore(invisibleNode, node.firstChild);
+    }
+  }
+  
+  wysihtml5.dom.split = {
+    splitBoundaries: splitBoundaries,
+    splitNodeAt: splitNodeAt
+  };
+  
+})(wysihtml5, rangy);(function(dom) {
   var documentElement = document.documentElement;
   if ("textContent" in documentElement) {
     dom.setTextContent = function(element, text) {
@@ -6298,16 +6725,38 @@ wysihtml5.quirks.ensureProperClearing = (function() {
     }
   }
   
-  function hasSameClasses(el1, el2) {
-    return el1.className.replace(REG_EXP_WHITE_SPACE, " ") == el2.className.replace(REG_EXP_WHITE_SPACE, " ");
-  }
-
-  function replaceWithOwnChildren(el) {
-    var parent = el.parentNode;
-    while (el.firstChild) {
-      parent.insertBefore(el.firstChild, el);
+  function getClasses(el) {
+    if(!el) {
+      return [];
     }
-    parent.removeChild(el);
+    var element = getElementForTextNode(el);
+    return element.className.trim().split(" ");
+  }
+  
+  function hasSameClasses(el1, el2) {
+    var 
+      el1ClassList = el1.className.trim().split(" "),
+      el2ClassList = el2.className.trim().split(" ");
+      
+    if(el1ClassList.length !== el2ClassList.length) {
+      return false;
+    }
+    
+    for(var i = 0; i < el1ClassList.length; i++) {
+      if(el2ClassList.indexOf(el1ClassList[i]) < 0) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  function getElementForTextNode(el) {
+    return el.nodeType === wysihtml5.ELEMENT_NODE ? el : el.parentNode;
+  }
+  
+  function remove(el) {
+    el.parentNode.removeChild(el);
   }
 
   function elementsHaveSameNonClassAttributes(el1, el2) {
@@ -6330,47 +6779,6 @@ wysihtml5.quirks.ensureProperClearing = (function() {
     return true;
   }
 
-  function isSplitPoint(node, offset) {
-    if (rangy.dom.isCharacterDataNode(node)) {
-      if (offset == 0) {
-        return !!node.previousSibling;
-      } else if (offset == node.length) {
-        return !!node.nextSibling;
-      } else {
-        return true;
-      }
-    }
-
-    return offset > 0 && offset < node.childNodes.length;
-  }
-
-  function splitNodeAt(node, descendantNode, descendantOffset) {
-    var newNode;
-    if (rangy.dom.isCharacterDataNode(descendantNode)) {
-      if (descendantOffset == 0) {
-        descendantOffset = rangy.dom.getNodeIndex(descendantNode);
-        descendantNode = descendantNode.parentNode;
-      } else if (descendantOffset == descendantNode.length) {
-        descendantOffset = rangy.dom.getNodeIndex(descendantNode) + 1;
-        descendantNode = descendantNode.parentNode;
-      } else {
-        newNode = rangy.dom.splitDataNode(descendantNode, descendantOffset);
-      }
-    }
-    if (!newNode) {
-      newNode = descendantNode.cloneNode(false);
-      if (newNode.id) {
-        newNode.removeAttribute("id");
-      }
-      var child;
-      while ((child = descendantNode.childNodes[descendantOffset])) {
-        newNode.appendChild(child);
-      }
-      rangy.dom.insertAfter(newNode, descendantNode);
-    }
-    return (descendantNode == node) ? newNode : splitNodeAt(node, newNode.parentNode, rangy.dom.getNodeIndex(newNode));
-  }
-  
   function Merge(firstNode) {
     this.isElementMerge = (firstNode.nodeType == wysihtml5.ELEMENT_NODE);
     this.firstTextNode = this.isElementMerge ? firstNode.lastChild : firstNode;
@@ -6412,12 +6820,13 @@ wysihtml5.quirks.ensureProperClearing = (function() {
     }
   };
 
-  function HTMLApplier(tagNames, cssClass, similarClassRegExp, normalize) {
-    this.tagNames = tagNames || [defaultTagName];
-    this.cssClass = cssClass || "";
-    this.similarClassRegExp = similarClassRegExp;
-    this.normalize = normalize;
+  function HTMLApplier(config) {    
+    this.tagNames = config.tagNames || [defaultTagName];
+    this.cssClass = config.className || "";
+    this.similarClassRegExp = config.classRegExp;
+    this.normalize = config.applyNormalization;
     this.applyToAnyTagName = false;
+    this.toggable = config.toggable === undefined ? true : config.toggable;
   }
 
   HTMLApplier.prototype = {
@@ -6435,12 +6844,16 @@ wysihtml5.quirks.ensureProperClearing = (function() {
 
     // Normalizes nodes after applying a CSS class to a Range.
     postApply: function(textNodes, range) {
-      var firstNode = textNodes[0], lastNode = textNodes[textNodes.length - 1];
-
-      var merges = [], currentMerge;
-
-      var rangeStartNode = firstNode, rangeEndNode = lastNode;
-      var rangeStartOffset = 0, rangeEndOffset = lastNode.length;
+      var 
+        firstNode = textNodes[0], 
+        lastNode = textNodes[textNodes.length - 1],
+        rangeClone = range.cloneRange(),
+        merges = [], 
+        currentMerge,
+        rangeStartNode = firstNode, 
+        rangeEndNode = lastNode,
+        rangeStartOffset = 0, 
+        rangeEndOffset = lastNode.length;
 
       var textNode, precedingTextNode;
 
@@ -6465,7 +6878,7 @@ wysihtml5.quirks.ensureProperClearing = (function() {
           currentMerge = null;
         }
       }
-
+      
       // Test whether the first node after the range needs merging
       var nextTextNode = this.getAdjacentMergeableTextNode(lastNode.parentNode, true);
       if (nextTextNode) {
@@ -6475,6 +6888,8 @@ wysihtml5.quirks.ensureProperClearing = (function() {
         }
         currentMerge.textNodes.push(nextTextNode);
       }
+      
+      //this.removeEmptySiblings(firstNode, lastNode);
 
       // Do the merges
       if (merges.length) {
@@ -6484,9 +6899,41 @@ wysihtml5.quirks.ensureProperClearing = (function() {
         // Set the range boundaries
         range.setStart(rangeStartNode, rangeStartOffset);
         range.setEnd(rangeEndNode, rangeEndOffset);
+                
+        // collapse range if it was collapsed before merge
+        if(rangeClone.collapsed) {
+          range.collapse();
+        }
       }
     },
     
+    isNormalizeNode: function(node) {
+      
+    },
+    
+    /*
+    removeEmptySiblings: function(firstNode, lastNode) {
+      var 
+        nodes = [
+          firstNode,
+          lastNode ? lastNode : firstNode
+        ],
+        siblings = ["previousElementSibling", "nextElementSibling"];
+      
+      for(var i = 0; i < nodes.length; i++) {
+        var sibling = nodes[i].parentNode[siblings[i]];
+        while(sibling !== null) {
+          var current = sibling;
+          sibling = sibling[siblings[i]];
+
+          var content = current.innerHTML;
+          if(content.trim().length <= 0) {
+            remove(current);
+          }
+        }
+      }
+    },
+    */
     getAdjacentMergeableTextNode: function(node, forward) {
         var isTextNode = (node.nodeType == wysihtml5.TEXT_NODE);
         var el = isTextNode ? node.parentNode : node;
@@ -6515,122 +6962,105 @@ wysihtml5.quirks.ensureProperClearing = (function() {
         && elementsHaveSameNonClassAttributes(el1, el2);
     },
 
-    createContainer: function(doc) {
-      var el = doc.createElement(this.tagNames[0]);
+    createContainer: function(doc, ancestor) {
+      var 
+        el = doc.createElement(this.tagNames[0]),
+        parentClasses = getClasses(ancestor);
       if (this.cssClass) {
         el.className = this.cssClass;
       }
+      
+      for(var i = 0; i < parentClasses.length; i++) {
+        if(!parentClasses[i].match(this.similarClassRegExp)) {
+          el.className += " " + parentClasses[i];
+        }
+      }
+      
       return el;
     },
 
-    applyToTextNode: function(textNode) {
-      var parent = textNode.parentNode;
-      if (parent.childNodes.length == 1 && rangy.dom.arrayContains(this.tagNames, parent.tagName.toLowerCase())) {
-        if (this.cssClass) {
-          addClass(parent, this.cssClass, this.similarClassRegExp);
-        }
-      } else {
-        var el = this.createContainer(rangy.dom.getDocument(textNode));
-        textNode.parentNode.insertBefore(el, textNode);
-        el.appendChild(textNode);
-      }
-    },
-
     isRemovable: function(el) {
-      return rangy.dom.arrayContains(this.tagNames, el.tagName.toLowerCase()) && wysihtml5.lang.string(el.className).trim() == this.cssClass;
+      var 
+        isContaining = rangy.dom.arrayContains(this.tagNames, el.tagName.toLowerCase()),
+        isSameClass = wysihtml5.lang.string(el.className).trim() === this.cssClass;
+
+      return isContaining && isSameClass;
     },
-
-    undoToTextNode: function(textNode, range, ancestorWithClass) {
-      if (!range.containsNode(ancestorWithClass)) {
-        // Split out the portion of the ancestor from which we can remove the CSS class
-        var ancestorRange = range.cloneRange();
-        ancestorRange.selectNode(ancestorWithClass);
-
-        if (ancestorRange.isPointInRange(range.endContainer, range.endOffset) && isSplitPoint(range.endContainer, range.endOffset)) {
-          splitNodeAt(ancestorWithClass, range.endContainer, range.endOffset);
-          range.setEndAfter(ancestorWithClass);
-        }
-        if (ancestorRange.isPointInRange(range.startContainer, range.startOffset) && isSplitPoint(range.startContainer, range.startOffset)) {
-          ancestorWithClass = splitNodeAt(ancestorWithClass, range.startContainer, range.startOffset);
-        }
-      }
-      
-      if (this.similarClassRegExp) {
-        removeClass(ancestorWithClass, this.similarClassRegExp);
-      }
-      if (this.isRemovable(ancestorWithClass)) {
-        replaceWithOwnChildren(ancestorWithClass);
-      }
-    },
-
+    
     applyToRange: function(range) {
-        var textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
-        if (!textNodes.length) {
-          try {
-            var node = this.createContainer(range.endContainer.ownerDocument);
-            range.surroundContents(node);
-            this.selectNode(range, node);
-            return;
-          } catch(e) {}
-        }
-        
-        range.splitBoundaries();
-        textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
-        
-        if (textNodes.length) {
-          var textNode;
-
-          for (var i = 0, len = textNodes.length; i < len; ++i) {
-            textNode = textNodes[i];
-            if (!this.getAncestorWithClass(textNode)) {
-              this.applyToTextNode(textNode);
-            }
-          }
-          
-          range.setStart(textNodes[0], 0);
-          textNode = textNodes[textNodes.length - 1];
-          range.setEnd(textNode, textNode.length);
-          
-          if (this.normalize) {
-            this.postApply(textNodes, range);
-          }
-        }
-    },
-
-    undoToRange: function(range) {
-      var textNodes = range.getNodes([wysihtml5.TEXT_NODE]), textNode, ancestorWithClass;
-      if (textNodes.length) {
-        range.splitBoundaries();
-        textNodes = range.getNodes([wysihtml5.TEXT_NODE]);
-      } else {
-        var doc = range.endContainer.ownerDocument,
-            node = doc.createTextNode(wysihtml5.INVISIBLE_SPACE);
-        range.insertNode(node);
-        range.selectNode(node);
-        textNodes = [node];
+      var nodes = [];
+      wysihtml5.dom.split.splitBoundaries(range);
+      if(range.collapsed) {
+        nodes = [range.commonAncestorContainer];
+      }
+      else {
+        nodes = range.getNodes([wysihtml5.ELEMENT_NODE], function(node) {
+          return node.nodeName === "SPAN";
+        });
       }
       
-      for (var i = 0, len = textNodes.length; i < len; ++i) {
-        textNode = textNodes[i];
-        ancestorWithClass = this.getAncestorWithClass(textNode);
-        if (ancestorWithClass) {
-          this.undoToTextNode(textNode, range, ancestorWithClass);
+      for(var i = 0; i < nodes.length; i++) {
+        if(nodes[i].className.indexOf(this.cssClass) < 0) {
+          addClass(nodes[i], this.cssClass, this.similarClassRegExp);
         }
       }
       
-      if (len == 1) {
-        this.selectNode(range, textNodes[0]);
-      } else {
-        range.setStart(textNodes[0], 0);
-        textNode = textNodes[textNodes.length - 1];
-        range.setEnd(textNode, textNode.length);
-
-        if (this.normalize) {
-          this.postApply(textNodes, range);
-        }
+      if (this.normalize) {
+        var textNodes = this.extractTextNodes(nodes);
+        this.postApply(textNodes, range);
       }
     },
     
+    undoToRange: function(range) {
+      var nodes = [];
+      if(range.collapsed && range.commonAncestorContainer.nodeType === wysihtml5.ELEMENT_NODE) {
+        // node is empty
+        var node = range.commonAncestorContainer;
+        node.className = node.className.replace(this.cssClass, "");
+        nodes = [node];
+      }
+      else if(range.collapsed && range.commonAncestorContainer.nodeType === wysihtml5.TEXT_NODE) {
+        var 
+          node = getElementForTextNode(range.commonAncestorContainer),
+          clone = node.cloneNode();
+  
+        clone.innerHTML = wysihtml5.INVISIBLE_SPACE;
+        clone.className = clone.className.replace(this.cssClass, "");
+        range.collapseAfter(node);
+        range.insertNode(clone);
+        range.selectNode(clone.firstChild);
+        range.collapse();
+        nodes = [clone];
+      }
+      else {
+        wysihtml5.dom.split.splitBoundaries(range);
+        nodes = range.getNodes([wysihtml5.ELEMENT_NODE]);
+        
+        for(var i = 0; i < nodes.length; i++) {
+          nodes[i].className = nodes[i].className.replace(this.cssClass, "");
+        }
+      }
+      
+      if (this.normalize) {
+        var textNodes = this.extractTextNodes(nodes);
+        this.postApply(textNodes, range);
+      }
+    },
+    
+    extractTextNodes: function(nodes) {
+      var textNodes = [];
+        
+      for(var i = 0; i < nodes.length; i++) {
+        for(var j = 0; j < nodes[i].childNodes.length; j++) {
+          if(nodes[i].childNodes[j].nodeType === wysihtml5.TEXT_NODE) {
+            textNodes.push(nodes[i].childNodes[j]);
+          }
+        }
+      }
+        
+      return textNodes;
+    },
+
     selectNode: function(range, node) {
       var isElement       = node.nodeType === wysihtml5.ELEMENT_NODE,
           canHaveHTML     = "canHaveHTML" in node ? node.canHaveHTML : true,
@@ -6683,7 +7113,7 @@ wysihtml5.quirks.ensureProperClearing = (function() {
     },
 
     toggleRange: function(range) {
-      if (this.isAppliedToRange(range)) {
+      if (this.isAppliedToRange(range) && this.toggable) {
         this.undoToRange(range);
       } else {
         this.applyToRange(range);
@@ -6896,8 +7326,7 @@ wysihtml5.commands.bold = {
  * Instead we set a css class
  */
 (function(wysihtml5) {
-  var undef,
-      REG_EXP = /wysiwyg-font-size-[0-9a-z\-]+/g;
+  var REG_EXP = /wysiwyg-font-size-[0-9a-z\-]+/g;
   
   wysihtml5.commands.fontSize = {
     exec: function(composer, command, size) {
@@ -6906,10 +7335,6 @@ wysihtml5.commands.bold = {
 
     state: function(composer, command, size) {
       return wysihtml5.commands.formatInline.state(composer, command, "span", "wysiwyg-font-size-" + size, REG_EXP);
-    },
-
-    value: function() {
-      return undef;
     }
   };
 })(wysihtml5);
@@ -6935,7 +7360,7 @@ wysihtml5.commands.bold = {
       // Following elements are grouped
       // when the caret is within a H1 and the H4 is invoked, the H1 should turn into H4
       // instead of creating a H4 within a H1 which would result in semantically invalid html
-      BLOCK_ELEMENTS_GROUP    = ["H1", "H2", "H3", "H4", "H5", "H6", "P", "BLOCKQUOTE", "DIV"];
+      BLOCK_ELEMENTS_GROUP    = ["H1", "H2", "H3", "H4", "H5", "H6", "P", "BLOCKQUOTE", "DIV", "UL", "OL"];
   
   /**
    * Remove similiar classes (based on classRegExp)
@@ -7082,15 +7507,16 @@ wysihtml5.commands.bold = {
   wysihtml5.commands.formatBlock = {
     exec: function(composer, command, nodeName, className, classRegExp) {
       var doc             = composer.doc,
-          blockElement    = this.state(composer, command, nodeName, className, classRegExp),
+          blockElements   = [ this.state(composer, command, nodeName, className, classRegExp) ],
           useLineBreaks   = composer.config.useLineBreaks,
           defaultNodeName = useLineBreaks ? "DIV" : "P",
           selectedNode;
 
       nodeName = typeof(nodeName) === "string" ? nodeName.toUpperCase() : nodeName;
       
-      if (blockElement) {
+      if (blockElements.length === 1 && blockElements[0] !== null) {
         composer.selection.executeAndRestoreSimple(function() {
+          var blockElement = blockElements[0];
           if (classRegExp) {
             _removeClass(blockElement, classRegExp);
           }
@@ -7111,18 +7537,29 @@ wysihtml5.commands.bold = {
       // Find similiar block element and rename it (<h2 class="foo"></h2>  =>  <h1 class="foo"></h1>)
       if (nodeName === null || wysihtml5.lang.array(BLOCK_ELEMENTS_GROUP).contains(nodeName)) {
         selectedNode = composer.selection.getSelectedNode();
-        blockElement = dom.getParentElement(selectedNode, {
-          nodeName: BLOCK_ELEMENTS_GROUP
-        });
+        
+        if(selectedNode.nodeName === "BODY") {
+          var range = composer.selection.getRange();
+          blockElements = range.getNodes([wysihtml5.ELEMENT_NODE], function(node) {
+            return BLOCK_ELEMENTS_GROUP.indexOf(node.nodeName) > -1;
+          });
+        }
+        else {
+          blockElements = [dom.getParentElement(selectedNode, {
+            nodeName: BLOCK_ELEMENTS_GROUP
+          })];
+        }
 
-        if (blockElement) {
+        if(blockElements.length > 0 && blockElements[0] !== null){
           composer.selection.executeAndRestore(function() {
-            // Rename current block element to new block element and add class
-            if (nodeName) {
-              blockElement = dom.renameElement(blockElement, nodeName);
-            }
-            if (className) {
-              _addClass(blockElement, className, classRegExp);
+            for(var i = 0; i < blockElements.length; i++) {
+              // Rename current block element to new block element and add class
+              if (nodeName) {
+                blockElements[i] = dom.renameElement(blockElements[i], nodeName);
+              }
+              if (className) {
+                _addClass(blockElements[i], className, classRegExp);
+              }
             }
           });
           return;
@@ -7134,7 +7571,7 @@ wysihtml5.commands.bold = {
         return;
       }
 
-      blockElement = doc.createElement(nodeName || defaultNodeName);
+      var blockElement = doc.createElement(nodeName || defaultNodeName);
       if (className) {
         blockElement.className = className;
       }
@@ -7199,21 +7636,29 @@ wysihtml5.commands.bold = {
     return alias ? [tagName.toLowerCase(), alias.toLowerCase()] : [tagName.toLowerCase()];
   }
   
-  function _getApplier(tagName, className, classRegExp) {
-    var identifier = tagName + ":" + className;
+  function _getApplier(tagName, className, classRegExp, toggable) {
+    var isToggable = toggable === undefined ? true : toggable;
+    var identifier = tagName + ":" + className + ":" + isToggable.toString();
     if (!htmlApplier[identifier]) {
-      htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier(_getTagNames(tagName), className, classRegExp, true);
+      //htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier(_getTagNames(tagName), className, classRegExp, true, toggable);
+      htmlApplier[identifier] = new wysihtml5.selection.HTMLApplier({
+        tagNames: _getTagNames(tagName),
+        className: className,
+        classRegExp: classRegExp,
+        applyNormalization: true,
+        toggable: toggable
+      });
     }
     return htmlApplier[identifier];
   }
   
   wysihtml5.commands.formatInline = {
-    exec: function(composer, command, tagName, className, classRegExp) {
+    exec: function(composer, command, tagName, className, classRegExp, toggable) {
       var range = composer.selection.getRange();
       if (!range) {
         return false;
       }
-      _getApplier(tagName, className, classRegExp).toggleRange(range);
+      _getApplier(tagName, className, classRegExp, toggable, composer).toggleRange(range);
       composer.selection.setSelection(range);
     },
 
@@ -7274,7 +7719,6 @@ wysihtml5.commands.bold = {
       var doc     = composer.doc,
           image   = this.state(composer),
           textNode,
-          i,
           parent;
 
       if (image) {
@@ -7297,11 +7741,8 @@ wysihtml5.commands.bold = {
 
       image = doc.createElement(NODE_NAME);
       
-      for (i in value) {
-        if (i === "className") {
-          i = "class";
-        }
-        image.setAttribute(i, value[i]);
+      for (var i in value) {
+        image.setAttribute(i === "className" ? "class" : i, value[i]);
       }
 
       composer.selection.insertNode(image);
@@ -7424,7 +7865,9 @@ wysihtml5.commands.bold = {
     return wysihtml5.dom.getParentElement(selectedNode, { nodeName: "OL" });
   }
 };wysihtml5.commands.insertUnorderedList = {
-  exec: function(composer, command) {
+  exec: function(composer, command, style) {
+    var STYLE_REG_EXP = /wysiwyg-list-style-[0-9a-f\-]+/g;
+    
     var doc           = composer.doc,
         selectedNode  = composer.selection.getSelectedNode(),
         list          = wysihtml5.dom.getParentElement(selectedNode, { nodeName: "UL" }),
@@ -7433,12 +7876,16 @@ wysihtml5.commands.bold = {
         isEmpty,
         tempElement;
     
+    /*
     if (!list && !otherList && composer.commands.support(command)) {
       doc.execCommand(command, false, null);
       return;
-    }
+    }*/
     
-    if (list) {
+    if (list && !this.compareStyle(list, style)) {
+      list.className = list.className.replace(STYLE_REG_EXP, "");
+      list.className = list.className + " wysiwyg-list-style-" + style;
+    } else if (list) {
       // Unwrap list
       // <ul><li>foo</li><li>bar</li></ul>
       // becomes:
@@ -7461,6 +7908,9 @@ wysihtml5.commands.bold = {
       isEmpty = tempElement.innerHTML === "" || tempElement.innerHTML === wysihtml5.INVISIBLE_SPACE || tempElement.innerHTML === "<br>";
       composer.selection.executeAndRestore(function() {
         list = wysihtml5.dom.convertToList(tempElement, "ul");
+        if(style) {
+          list.className = list.className + " wysiwyg-list-style-" + style;
+        }
       });
       if (isEmpty) {
         composer.selection.selectNode(list.querySelector("li"), true);
@@ -7468,9 +7918,20 @@ wysihtml5.commands.bold = {
     }
   },
   
-  state: function(composer) {
-    var selectedNode = composer.selection.getSelectedNode();
-    return wysihtml5.dom.getParentElement(selectedNode, { nodeName: "UL" });
+  state: function(composer, command, style) {
+    var 
+      selectedNode = composer.selection.getSelectedNode(),
+      list = wysihtml5.dom.getParentElement(selectedNode, { nodeName: "UL" });
+    
+    if(style) {
+      return this.compareStyle(list, style);
+    } else {
+      return list;
+    }
+  },
+  
+  compareStyle: function(list, style) {
+    return list && style && list.className.indexOf(style) > -1;  
   }
 };wysihtml5.commands.italic = {
   exec: function(composer, command) {
@@ -7868,7 +8329,7 @@ wysihtml5.views.View = Base.extend(
   enable: function() {
     this.element.removeAttribute("disabled");
   }
-});(function(wysihtml5) {
+});(function(wysihtml5, rangy) {
   var dom       = wysihtml5.dom,
       browser   = wysihtml5.browser;
   
@@ -7895,11 +8356,6 @@ wysihtml5.views.View = Base.extend(
       if (parse) {
         value = this.parent.parse(value);
       }
-
-      // Replace all "zero width no breaking space" chars
-      // which are used as hacks to enable some functionalities
-      // Also remove all CARET hacks that somehow got left
-      value = wysihtml5.lang.string(value).replace(wysihtml5.INVISIBLE_SPACE).by("");
 
       return value;
     },
@@ -7953,13 +8409,32 @@ wysihtml5.views.View = Base.extend(
       }
       
       this.base();
+      var self = this;
       
-      var lastChild = this.element.lastChild;
-      if (setToEnd && lastChild) {
-        if (lastChild.nodeName === "BR") {
-          this.selection.setBefore(this.element.lastChild);
-        } else {
-          this.selection.setAfter(this.element.lastChild);
+      
+      if (wysihtml5.browser.doesAsyncFocus()) {
+        setTimeout(doFocus, 0);
+      }
+      else {
+        doFocus();
+      }
+      
+      function doFocus() {
+        var lastChild = self.element;
+        while(lastChild.lastChild!== null) {
+          lastChild = lastChild.lastChild;
+        }
+
+        if (setToEnd && lastChild) {
+          if (lastChild.nodeName === "BR") {
+            self.selection.setBefore(lastChild);
+          }
+          else if(lastChild.nodeName === "SPAN") {
+            self.selection.selectNode(lastChild);
+          } 
+          else {
+            self.selection.setAfter(lastChild);
+          }
         }
       }
     },
@@ -7978,6 +8453,7 @@ wysihtml5.views.View = Base.extend(
              innerHTML === "<br>"        ||
              innerHTML === "<p></p>"     ||
              innerHTML === "<p><br></p>" ||
+             innerHTML === wysihtml5.INVISIBLE_SPACE ||
              this.hasPlaceholderSet();
     },
 
@@ -8198,7 +8674,9 @@ wysihtml5.views.View = Base.extend(
     _initLineBreaking: function() {
       var that                              = this,
           USE_NATIVE_LINE_BREAK_INSIDE_TAGS = ["LI", "P", "H1", "H2", "H3", "H4", "H5", "H6"],
-          LIST_TAGS                         = ["UL", "OL", "MENU"];
+          LIST_TAGS                         = ["UL", "OL", "MENU"],
+          defaultMarkup = that.config.defaultMarkup,
+          allowedMarkup = that.config.allowedMarkup   
       
       function adjust(selectedNode) {
         var parentElement = dom.getParentElement(selectedNode, { nodeName: ["P", "DIV"] }, 2);
@@ -8213,19 +8691,238 @@ wysihtml5.views.View = Base.extend(
         }
       }
       
-      if (!this.config.useLineBreaks) {
-        dom.observe(this.element, ["focus", "keydown"], function() {
-          if (that.isEmpty()) {
-            var paragraph = that.doc.createElement("P");
-            that.element.innerHTML = "";
-            that.element.appendChild(paragraph);
-            if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
-              paragraph.innerHTML = "<br>";
-              that.selection.setBefore(paragraph.firstChild);
+      function validateStructure(node, level) {
+        var 
+          n = node.nodeType === wysihtml5.ELEMENT_NODE ? node : node.parentNode,
+          lvl = level || 0;
+        
+        // test all allowed structures. Return true if at least one returned true
+        for(var idx = 0; idx < allowedMarkup.length; idx++) {
+          if(doValidate(n, idx, lvl)) {
+            return true;
+          }
+        }
+
+        // recursive validation function
+        function doValidate(n, idx, lvl) {
+          if(n && n.nodeName === allowedMarkup[idx][lvl]) {   
+            if(allowedMarkup[idx][lvl + 1]) {
+              return doValidate(n.parentNode, idx, lvl + 1);
             } else {
-              that.selection.selectNode(paragraph, true);
+              return true;
             }
           }
+
+          return false;
+        }
+        
+        // structure is invalid at this point
+        return false;
+      }
+      
+      function createDefaultStructure(textNode) {
+        var 
+          order = defaultMarkup.slice(0).reverse(),
+          topNode = that.doc.createElement(order[0]),
+          node = topNode,
+          textNodeClone = textNode.cloneNode();
+        
+          for(var i = 1; i < order.length; i++) {
+            var 
+              temp = that.doc.createElement(order[i]),
+              className = that.config.defaultClassNames[order[i].toLowerCase()];
+        
+            if(className) {
+              temp.className = className;
+            };
+
+            node.appendChild(temp);
+            node = temp;
+          }
+          
+          // insert text
+          if(textNodeClone.nodeType === wysihtml5.TEXT_NODE) {
+            node.appendChild(textNodeClone);
+          } else {
+            node.innerHTML = wysihtml5.INVISIBLE_SPACE;
+          }
+          
+          // Always end line with a BR
+          
+          if(browser.needsLineBreakOnEmptyLine()) {
+            if (node.lastChild.nodeName !== "BR") {
+              node.appendChild(that.doc.createElement("BR"));
+            }
+          }
+        return topNode;
+      }
+
+      function insertDefaultContent(node) {
+        var span = that.doc.createElement("SPAN"),
+          className = that.config.defaultClassNames['span'];
+
+        if(className !== undefined) {
+          span.className = className;
+        }
+        
+        span.innerHTML = wysihtml5.INVISIBLE_SPACE;
+        node.innerHTML = "";
+        node.appendChild(span);
+        
+        return span;
+      }
+      
+      function selectEmptySpan(span) {
+        if (!browser.displaysCaretInEmptyContentEditableCorrectly()) {
+          span.innerHTML = "<br>";
+          that.selection.setBefore(span.firstChild);
+        } else {
+          that.selection.selectNode(span, true);
+        }
+      }
+      
+      function findParentParagraph(node) {
+        var current = node;
+        while(current !== null && current.nodeName !== "P") {
+          current = current.parentNode;
+        }
+        return current;
+      }
+      
+      // ugly as hell but had no better idea to check if line is
+      // empty or not.
+      function isEmptyLine(node) {
+        
+        var 
+          parentParagraph = dom.getParentElement(node, { nodeName: 'P' }, 10),
+          trimmedText = parentParagraph.textContent.trim(),
+          testInvisibleRegex = new RegExp('^' + wysihtml5.INVISIBLE_SPACE + '+$'),
+          isEmptyLineBySelector = that.config.nonEmptyLineSelectors?
+              parentParagraph.querySelector(that.config.nonEmptyLineSelectors.join()) === null
+              :true;
+  
+          //console.log("inner", inner, parent);
+          var retVal = isEmptyLineBySelector 
+                  && (trimmedText === "" ||
+                      testInvisibleRegex.test(trimmedText));
+
+          return retVal;
+      }
+
+      
+      function findDeepLastChild(node) {
+        var current = node;
+        while(current && current.lastChild) {
+          current = current.lastChild;
+        }
+        
+        return current;
+      }
+     
+      // Ensure proper html structure
+      if(!that.config.useLineBreaks) {        
+        dom.observe(this.element, "keyup", function(event) {
+          
+          //console.log("event", event);
+
+          if (event.ctrlKey || event.keyCode === wysihtml5.CTRL_KEY) {
+            return;
+          }
+
+          var 
+            range = that.selection.getRange(),
+            caretPosNode = range.endContainer,
+            parentSpanNode = dom.getParentElement(caretPosNode, { nodeName: 'SPAN' }, 10);
+            
+          if(!validateStructure(caretPosNode, 0)) {
+            // insert default structure here
+            // find child element of body to replace first
+            var replace = caretPosNode;
+            while(replace.parentNode && replace.parentNode.nodeName !== "BODY") {
+              replace = replace.parentNode;
+            }
+            
+            // create structure
+            var 
+              defStructure = createDefaultStructure(caretPosNode),
+              doc = that.doc,
+              body = doc.body;
+            //console.log("replace", replace);
+            
+            
+            if(replace !== doc) {
+              // any character was inserted
+              body.insertBefore(defStructure, replace);
+              body.removeChild(replace);
+            } else {
+              if(body.firstChild && body.firstChild.nodeName === "P") {
+                // ctrl, meta + character. Return here.
+                return;
+              } else {
+                // backspace or delete, no new character was inserted
+                range.insertNode(defStructure);
+              }
+              // some browsers insert a <br> in body... remove them
+              for(var i = 0; i < body.childNodes.length; i++) {
+                if(body.childNodes[i].nodeName === "BR") {
+                  body.removeChild(body.childNodes[i]);
+                }
+              }
+            }
+            
+            var lastChild = findDeepLastChild(defStructure);
+            if(lastChild.nodeName === "BR") {
+              that.selection.setBefore(lastChild);
+            } else {
+              that.selection.setAfter(lastChild);
+            }
+            //that.selection.setBefore(defStructure.firstChild.lastChild);
+            //console.log("range", defStructure.firstChild.lastChild, range);
+            //selectEmptySpan(defStructure.firstChild);   // TEMP ONLY!
+          }
+        });
+        
+      }
+     
+      // Ensure empty lines contain default content
+      if(!that.config.useLineBreaks) {
+        // insert newline
+        dom.observe(this.element, "keyup", function(event) {
+          if(event.keyCode === wysihtml5.ENTER_KEY) {
+            var 
+              range = that.selection.getRange(),
+              p = findParentParagraph(range.commonAncestorContainer);
+            
+            // only if text, do nothing if elment is list etc...
+            if(p && p.previousSibling && p.previousSibling !== null && isEmptyLine(p.previousSibling)) {
+              var 
+                prev = p.previousSibling,
+                span = insertDefaultContent(prev);
+              span.appendChild(that.doc.createElement("BR"));
+            }
+          }
+        });
+      }    
+      
+      // Ensure default markup is in place if
+      // content is empty
+      if(!that.config.useLineBreaks) {
+        dom.observe(this.element, "focus", function() {
+          if(that.isEmpty()) {
+            var paragraph = that.doc.createElement("P");
+
+            insertDefaultContent(paragraph);
+            that.doc.body.appendChild(paragraph);
+          }
+        });
+      }
+      
+      // Under certain circumstances Chrome + Safari create nested <p> or <hX> tags after paste
+      // Inserting an invisible white space in front of it fixes the issue
+      if (browser.createsNestedInvalidMarkupAfterPaste()) {
+        dom.observe(this.element, "paste", function(event) {
+          var invisibleSpace = that.doc.createTextNode(wysihtml5.INVISIBLE_SPACE);
+          that.selection.insertNode(invisibleSpace);
         });
       }
       
@@ -8252,15 +8949,19 @@ wysihtml5.views.View = Base.extend(
                 return;
               }
 
-              list = dom.getParentElement(selectedNode, { nodeName: LIST_TAGS }, 2);
+              list = dom.getParentElement(selectedNode, { nodeName: LIST_TAGS }, 3);
 
               if (!list) {
                 adjust(selectedNode);
+                var span = insertDefaultContent(selectedNode);
+                selectEmptySpan(span);
               }
             }
 
             if (keyCode === wysihtml5.ENTER_KEY && blockElement.nodeName.match(/^H[1-6]$/)) {
               adjust(selectedNode);
+              span = insertDefaultContent(selectedNode);
+              selectEmptySpan(span);
             }
           }, 0);
           return;
@@ -8273,7 +8974,7 @@ wysihtml5.views.View = Base.extend(
       });
     }
   });
-})(wysihtml5);(function(wysihtml5) {
+})(wysihtml5, rangy);(function(wysihtml5) {
   var dom             = wysihtml5.dom,
       doc             = document,
       win             = window,
@@ -8638,6 +9339,11 @@ wysihtml5.views.View = Base.extend(
         }, 0);
       });
     }
+
+    // --------- Safari doesn't set focus after re-positioning caret, see e.g. https://tracker.moodle.org/browse/MDL-41328 ---------
+    dom.observe(element, "touchend", function() {
+      that.doc.defaultView.focus();
+    });
     
     // --------- Show url in tooltip when hovering links or images ---------
     var titlePrefixes = {
@@ -8658,7 +9364,47 @@ wysihtml5.views.View = Base.extend(
         target.setAttribute("title", title);
       }
     });
+    
+    // --------- Prevent uncollapsed selection of empty strings ---------
+    dom.observe(element, "dblclick", function(event) {
+        var 
+          range = that.selection.getRange(),
+          nodes = range.getNodes([wysihtml5.ELEMENT_NODE], function(e){
+            if(e.nodeName === "SPAN" && e.firstChild) {
+              var first = e.firstChild;
+              return first.nodeName === "BR" || (first.nodeName === "#text" && first.data === wysihtml5.INVISIBLE_SPACE);
+            }
+            
+            return false;
+          });
+                
+        if(nodes.length === 1) {
+          that.selection.selectNode(nodes[0].firstChild);
+        }
+    });
+        
+    // --------- Save selection on blur ---------
+    if (!browser.keepsSelectionOnBlur()) {
+      var range;
+      
+      /**
+       * Save selection on every caret change. Apply range again
+       * in the following blur event.
+       */
+      dom.observe(element, ["keyup", "mouseup", "beforedeactivate"], function() {
+        range = that.selection.getRange();
+      });
+
+      dom.observe(element, "blur", function() {
+        setTimeout(function() {
+          if(range) {
+            that.selection.setSelection(range);
+          }
+        }, 0);
+      });
+    }
   };
+  
 })(wysihtml5);/**
  * Class that takes care that the value of the composer and the textarea is always in sync
  */
@@ -8896,6 +9642,7 @@ wysihtml5.views.Textarea = wysihtml5.views.View.extend(
           callbackWrapper(event);
         }
         if (keyCode === wysihtml5.ESCAPE_KEY) {
+          that.fire("cancel");
           that.hide();
         }
       });
@@ -9263,27 +10010,41 @@ wysihtml5.views.Textarea = wysihtml5.views.View.extend(
       for (; i<length; i++) {
         // 'javascript:;' and unselectable=on Needed for IE, but done in all browsers to make sure that all get the same css applied
         // (you know, a:link { ... } doesn't match anchors with missing href attribute)
-        dom.setAttributes({
-          href:         "javascript:;",
-          unselectable: "on"
-        }).on(links[i]);
+        if (links[i].nodeName === "A") {
+          dom.setAttributes({
+            href:         "javascript:;",
+            unselectable: "on"
+          }).on(links[i]);
+        } else {
+          dom.setAttributes({ unselectable: "on" }).on(links[i]);
+        }
       }
+      
+      var delegatedHandlers = [];
 
       // Needed for opera and chrome
-      dom.delegate(container, "[data-wysihtml5-command], [data-wysihtml5-action]", "mousedown", function(event) { event.preventDefault(); });
+      delegatedHandlers.push(dom.delegate(container, "[data-wysihtml5-command], [data-wysihtml5-action]", "mousedown", function(event) {
+        event.preventDefault();
+      }));
       
-      dom.delegate(container, "[data-wysihtml5-command]", "click", function(event) {
+      delegatedHandlers.push(dom.delegate(container, "[data-wysihtml5-command]", "click", function(event) {
         var link          = this,
             command       = link.getAttribute("data-wysihtml5-command"),
             commandValue  = link.getAttribute("data-wysihtml5-command-value");
         that.execCommand(command, commandValue);
         event.preventDefault();
-      });
+      }));
 
-      dom.delegate(container, "[data-wysihtml5-action]", "click", function(event) {
+      delegatedHandlers.push(dom.delegate(container, "[data-wysihtml5-action]", "click", function(event) {
         var action = this.getAttribute("data-wysihtml5-action");
         that.execAction(action);
         event.preventDefault();
+      }));
+
+      editor.on("destroy:composer", function() {
+        delegatedHandlers.forEach(function(handler) {
+          handler.stop();
+        });
       });
 
       editor.on("focus:composer", function() {
@@ -9459,7 +10220,15 @@ wysihtml5.views.Textarea = wysihtml5.views.View.extend(
     // Placeholder text to use, defaults to the placeholder attribute on the textarea element
     placeholderText:      undef,
     // Whether the rich text editor should be rendered on touch devices (wysihtml5 >= 0.3.0 comes with basic support for iOS 5)
-    supportTouchDevices:  true
+    supportTouchDevices:  true,
+    // Whether senseless <span> elements (empty or without attributes) should be removed/replaced with their content
+    cleanUp:              true,
+    // default css class to apply to new elements, elements: class string pairs
+    defaultClassNames: {},
+    allowedMarkup: [
+      ["SPAN", "P", "BODY"]
+    ],
+    defaultMarkup: ["SPAN", "P"]
   };
   
   wysihtml5.Editor = wysihtml5.lang.Dispatcher.extend(
@@ -9494,10 +10263,6 @@ wysihtml5.views.Textarea = wysihtml5.views.View.extend(
           this.toolbar = new wysihtml5.toolbar.Toolbar(this, this.config.toolbar);
         }
       });
-      
-      try {
-        console.log("Heya! This page is using wysihtml5 for rich text editing. Check out https://github.com/xing/wysihtml5");
-      } catch(e) {}
     },
     
     isCompatible: function() {
@@ -9554,7 +10319,7 @@ wysihtml5.views.Textarea = wysihtml5.views.View.extend(
     },
     
     parse: function(htmlOrElement) {
-      var returnValue = this.config.parser(htmlOrElement, this.config.parserRules, this.composer.sandbox.getDocument(), true);
+      var returnValue = this.config.parser(htmlOrElement, this.config, this.composer.sandbox.getDocument());
       if (typeof(htmlOrElement) === "object") {
         wysihtml5.quirks.redraw(htmlOrElement);
       }
@@ -9570,7 +10335,7 @@ wysihtml5.views.Textarea = wysihtml5.views.View.extend(
         var keepScrollPosition  = true,
             that                = this;
         that.composer.selection.executeAndRestore(function() {
-          wysihtml5.quirks.cleanPastedHTML(that.composer.element);
+          wysihtml5.quirks.cleanPastedHTML(that.composer.element, that.config.cleanPastedRules);
           that.parse(that.composer.element);
         }, keepScrollPosition);
       });
