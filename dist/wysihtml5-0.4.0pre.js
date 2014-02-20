@@ -4760,6 +4760,24 @@ wysihtml5.dom.insert = function(elementToInsert) {
       }
     }
   };
+};wysihtml5.dom.isEmptyLine = function(node, nonEmptyLineSelectors) {
+  var
+      parentParagraph = this.getParentElement(node, {nodeName: 'P'}, 10);
+  if (parentParagraph === null) {
+    return false;
+  }
+  var
+      trimmedText = parentParagraph.textContent.trim(),
+      testInvisibleRegex = new RegExp('^' + wysihtml5.INVISIBLE_SPACE + '+$'),
+      isEmptyLineBySelector = (nonEmptyLineSelectors && nonEmptyLineSelectors.isArray())?
+        parentParagraph.querySelector(nonEmptyLineSelectors.join()) === null
+        : true;
+
+  //console.log("inner", inner, parent);
+  var retVal = isEmptyLineBySelector
+          && (trimmedText === "" || testInvisibleRegex.test(trimmedText));
+
+  return retVal;
 };wysihtml5.dom.moveElements = function(to, elements) {
   for(var i = 0; i < elements.length; i++) {
     var element = elements[i];
@@ -8780,36 +8798,7 @@ wysihtml5.views.View = Base.extend(
           that.selection.selectNode(span, true);
         }
       }
-      
-      function findParentParagraph(node) {
-        var current = node;
-        while(current !== null && current.nodeName !== "P") {
-          current = current.parentNode;
-        }
-        return current;
-      }
-      
-      // ugly as hell but had no better idea to check if line is
-      // empty or not.
-      function isEmptyLine(node) {
-        
-        var 
-          parentParagraph = dom.getParentElement(node, { nodeName: 'P' }, 10),
-          trimmedText = parentParagraph.textContent.trim(),
-          testInvisibleRegex = new RegExp('^' + wysihtml5.INVISIBLE_SPACE + '+$'),
-          isEmptyLineBySelector = that.config.nonEmptyLineSelectors?
-              parentParagraph.querySelector(that.config.nonEmptyLineSelectors.join()) === null
-              :true;
-  
-          //console.log("inner", inner, parent);
-          var retVal = isEmptyLineBySelector 
-                  && (trimmedText === "" ||
-                      testInvisibleRegex.test(trimmedText));
 
-          return retVal;
-      }
-
-      
       function findDeepLastChild(node) {
         var current = node;
         while(current && current.lastChild) {
@@ -8885,16 +8874,17 @@ wysihtml5.views.View = Base.extend(
       }
      
       // Ensure empty lines contain default content
-      if(!that.config.useLineBreaks) {
+      if(!that.config.useLineBreaks && wysihtml5.browser.insertsLineBreaksOnReturn()) {
         // insert newline
         dom.observe(this.element, "keyup", function(event) {
           if(event.keyCode === wysihtml5.ENTER_KEY) {
             var 
               range = that.selection.getRange(),
-              p = findParentParagraph(range.commonAncestorContainer);
+              p = dom.getParentElement(range.commonAncestorContainer, { nodeName: 'P' }, 10);
             
             // only if text, do nothing if elment is list etc...
-            if(p && p.previousSibling && p.previousSibling !== null && isEmptyLine(p.previousSibling)) {
+            if(p && p.previousSibling && p.previousSibling !== null
+                    && dom.isEmptyLine(p.previousSibling, that.config.nonEmptyLineSelectors)) {
               var 
                 prev = p.previousSibling,
                 span = insertDefaultContent(prev);
@@ -9367,20 +9357,12 @@ wysihtml5.views.View = Base.extend(
     
     // --------- Prevent uncollapsed selection of empty strings ---------
     dom.observe(element, "dblclick", function(event) {
-        var 
-          range = that.selection.getRange(),
-          nodes = range.getNodes([wysihtml5.ELEMENT_NODE], function(e){
-            if(e.nodeName === "SPAN" && e.firstChild) {
-              var first = e.firstChild;
-              return first.nodeName === "BR" || (first.nodeName === "#text" && first.data === wysihtml5.INVISIBLE_SPACE);
-            }
-            
-            return false;
-          });
-                
-        if(nodes.length === 1) {
-          that.selection.selectNode(nodes[0].firstChild);
-        }
+      if (dom.isEmptyLine(event.target, that.config.nonEmptyLineSelectors)) {
+        var range = that.selection.getRange();
+        range.selectNodeContents(event.target);
+        range.collapse(false);
+        that.selection.setSelection(range);
+      }
     });
         
     // --------- Save selection on blur ---------
