@@ -6088,13 +6088,18 @@ wysihtml5.dom.replaceWithChildNodes = function(node) {
   };
   
   function removeUnselectedBoundaryTextNodes(range, textNodes) {
-    var firstNode = textNodes[0]? textNodes[0].parentNode : [],
-        lastNode = textNodes[textNodes.length - 1]? textNodes[textNodes.length - 1] : [];
-    if(!range.collapsed && (firstNode.length > 1 && range.startOffset === textNodes[0].length)) {
-      textNodes.splice(0,1);
-    }
-    if(!range.collapsed && (lastNode.length > 1 && range.endOffset === 0)) {
-      textNodes.splice(textNodes.length - 1, 1);
+    // If there's only 1 or 0 text node we don't need to check boundaries.
+    if (textNodes.length > 1) {
+      var firstNode = textNodes[0]? textNodes[0].parentNode : [],
+          lastNode = textNodes[textNodes.length - 1]? textNodes[textNodes.length - 1] : [],
+          lastNodeCleanText = lastNode.length > 1? lastNode.wholeText.trim() : [];
+      if(!range.collapsed && (firstNode.length > 1 && range.startOffset === textNodes[0].length)) {
+        textNodes.splice(0,1);
+      }
+      if(!range.collapsed && (lastNodeCleanText.length > 1 && range.endOffset === 0)) {
+        // Remove last text node if the content (trimmed) is longer than 1 character and the selection offset is 0.
+        textNodes.splice(textNodes.length - 1, 1);
+      }
     }
     return textNodes;
   };
