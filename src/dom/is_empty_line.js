@@ -7,7 +7,7 @@ wysihtml5.dom.isEmptyLine = function(node, nonEmptyLineSelectors) {
   var
       trimmedText = parentParagraph.textContent.trim(),
       testInvisibleRegex = new RegExp('^' + wysihtml5.INVISIBLE_SPACE + '+$'),
-      isEmptyLineBySelector = (nonEmptyLineSelectors && nonEmptyLineSelectors.isArray())?
+      isEmptyLineBySelector = (nonEmptyLineSelectors && typeof(nonEmptyLineSelectors.join) === "function")?
         parentParagraph.querySelector(nonEmptyLineSelectors.join()) === null
         : true;
 
