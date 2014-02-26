@@ -310,7 +310,8 @@
       }
       
       for(var i = 0; i < nodes.length; i++) {
-        if(nodes[i].className.indexOf(this.cssClass) < 0) {
+        var classList = nodes[i].className.split(" ");
+        if(classList.indexOf(this.cssClass) < 0) {
           addClass(nodes[i], this.cssClass, this.similarClassRegExp);
         }
       }
