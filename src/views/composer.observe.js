@@ -191,20 +191,12 @@
     
     // --------- Prevent uncollapsed selection of empty strings ---------
     dom.observe(element, "dblclick", function(event) {
-        var 
-          range = that.selection.getRange(),
-          nodes = range.getNodes([wysihtml5.ELEMENT_NODE], function(e){
-            if(e.nodeName === "SPAN" && e.firstChild) {
-              var first = e.firstChild;
-              return first.nodeName === "BR" || (first.nodeName === "#text" && first.data === wysihtml5.INVISIBLE_SPACE);
-            }
-            
-            return false;
-          });
-                
-        if(nodes.length === 1) {
-          that.selection.selectNode(nodes[0].firstChild);
-        }
+      if (dom.isEmptyLine(event.target, that.config.nonEmptyLineSelectors)) {
+        var range = that.selection.getRange();
+        range.selectNodeContents(event.target);
+        range.collapse(false);
+        that.selection.setSelection(range);
+      }
     });
         
     // --------- Save selection on blur ---------

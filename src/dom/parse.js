@@ -94,7 +94,10 @@ wysihtml5.dom.parse = (function() {
     }
     
     // remove emty text nodes from pasted content
-    _removeEmptyTextNodes(element);
+    // INFO: We don't need to support rich formats from outside the editor,
+    // we only support the plain text so if there's an empty space we don't want
+    // to remove it.
+//    _removeEmptyTextNodes(element);
     
     while (element.firstChild) {
       firstChild = element.firstChild;

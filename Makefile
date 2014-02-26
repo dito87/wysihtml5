@@ -27,6 +27,7 @@ JS_FILES = src/wysihtml5.js \
   src/dom/has_element_with_class_name.js \
   src/dom/insert.js \
   src/dom/insert_css.js \
+  src/dom/is_empty_line.js \
   src/dom/move_elements.js \
   src/dom/observe.js \
   src/dom/parse.js \

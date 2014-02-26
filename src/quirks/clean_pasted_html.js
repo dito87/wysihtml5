@@ -20,23 +20,24 @@ wysihtml5.quirks.cleanPastedHTML = (function() {
         method,
         matches,
         matchesLength,
-        i,
-        j = 0;
+        i;
     if (isString) {
       element = wysihtml5.dom.getAsDom(elementOrHtml, context);
     } else {
       element = elementOrHtml;
     }
-    
+//    console.log('Before cleanup:' + element.outerHTML);
     for (i in rules) {
       matches       = element.querySelectorAll(i);
       method        = rules[i];
       matchesLength = matches.length;
-      for (; j<matchesLength; j++) {
+//      console.log("Rule: \"" + i + "\" matches " + matchesLength + " elements.");
+      for (var j = 0; j<matchesLength; j++) {
         method(matches[j]);
       }
+//      console.log('After rule:' + element.outerHTML);
     }
-    
+//    console.log('After cleanup:' + element.outerHTML);
     matches = elementOrHtml = rules = null;
     
     return isString ? element.innerHTML : element;

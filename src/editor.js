@@ -172,7 +172,7 @@
         var keepScrollPosition  = true,
             that                = this;
         that.composer.selection.executeAndRestore(function() {
-          wysihtml5.quirks.cleanPastedHTML(that.composer.element);
+          wysihtml5.quirks.cleanPastedHTML(that.composer.element, that.config.cleanPastedRules);
           that.parse(that.composer.element);
         }, keepScrollPosition);
       });
