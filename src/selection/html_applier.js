@@ -9,7 +9,8 @@
 (function(wysihtml5, rangy) {
   var defaultTagName = "span";
   
-  var REG_EXP_WHITE_SPACE = /\s+/g;
+  var REG_EXP_WHITE_SPACE = /\s+/g,
+      REG_EXP_PROTECTED_CLASS = /[0-9a-z\-]+?\-protected$/
   
   function hasClass(el, cssClass, regExp) {
     if (!el.className) {
@@ -22,8 +23,13 @@
 
   function addClass(el, cssClass, regExp) {
     if (el.className) {
-      removeClass(el, regExp);
-      el.className += " " + cssClass;
+      var targetClass = regExp.exec(el.className);
+      if (targetClass.length === 1 && REG_EXP_PROTECTED_CLASS.test(targetClass[0])) {
+        // Protected class, do nothing.
+      } else {
+        removeClass(el, regExp);
+        el.className += " " + cssClass;
+      }
     } else {
       el.className = cssClass;
     }
