@@ -304,12 +304,21 @@
     },
     
     applyToRange: function(range) {
-      var nodes = [];
-      wysihtml5.dom.split.splitBoundaries(range);
-      if(range.collapsed) {
+      var 
+        nodes = [],
+        ancestor = getElementForTextNode(range.commonAncestorContainer),
+        ancestorContent = ancestor.innerHTML.trim();
+      
+      if(range.collapsed && (ancestorContent.indexOf('<br>') === 0 || ancestorContent.length <= 0)) {
+        // is an empty line
+        nodes = [ancestor];
+      }
+      else if(range.collapsed) {
+        wysihtml5.dom.split.splitBoundaries(range);
         nodes = [range.commonAncestorContainer];
       }
       else {
+        wysihtml5.dom.split.splitBoundaries(range);
         nodes = range.getNodes([wysihtml5.ELEMENT_NODE], function(node) {
           return node.nodeName === "SPAN";
         });
@@ -324,7 +333,9 @@
       
       if (this.normalize) {
         var textNodes = this.extractTextNodes(nodes);
-        this.postApply(textNodes, range);
+        if(textNodes.length > 0) {
+          this.postApply(textNodes, range);
+        }
       }
     },
     

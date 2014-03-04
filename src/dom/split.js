@@ -55,7 +55,9 @@
             return v.data;
           }).join("");
           
-          insertBefore(node, createNode(styleParent, text));
+          if(text.trim().length > 0) {
+            insertBefore(node, createNode(styleParent, text));
+          }
         }
 
         var nexts = findSiblings(nodes[i], "next");
@@ -64,7 +66,9 @@
             return v.data;
           }).join("");
           
-          insertAfter(node, createNode(styleParent, text));
+          if(text.trim().length > 0) {
+            insertAfter(node, createNode(styleParent, text));
+          }
         }
         
         if(firstNode === undefined) {
