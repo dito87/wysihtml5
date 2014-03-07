@@ -35,6 +35,7 @@
       // TODO: Refactor the following part
       range.splitBoundaries();
       concatRangeTextNodes(range);
+      range.refresh();
       var
         nodes = removeUnselectedBoundaryTextNodes(range, range.getNodes([wysihtml5.TEXT_NODE])),
         firstNode = undefined,
