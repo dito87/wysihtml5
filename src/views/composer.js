@@ -460,6 +460,15 @@
         return current;
       }
      
+     function setCaretPosition(node) {
+        var lastChild = findDeepLastChild(node);
+        if (lastChild.nodeName === "BR") {
+          return that.selection.setBefore(lastChild);
+        } else {
+          return that.selection.setAfter(lastChild);
+        }
+     }
+     
       // Ensure proper html structure
       if(!that.config.useLineBreaks) {        
         dom.observe(this.element, "keyup", function(event) {
@@ -476,9 +485,8 @@
 
           var 
             range = that.selection.getRange(),
-            caretPosNode = range.endContainer,
-            parentSpanNode = dom.getParentElement(caretPosNode, { nodeName: 'SPAN' }, 10);
-          
+            caretPosNode = range.endContainer;
+            
           // Reposition caret if outside a span
           if(wysihtml5.ARROW_KEYS.indexOf(event.keyCode) > -1){
             if(caretPosNode.nodeName === "P") {
@@ -489,30 +497,37 @@
           else if(!validateStructure(caretPosNode, 0)) {
             // insert default structure here
             // find child element of body to replace first
-            var replace = caretPosNode;
-            while(replace.parentNode && replace.parentNode.nodeName !== "BODY") {
-              replace = replace.parentNode;
-            }
+            var replace = caretPosNode.parentNode? caretPosNode.parentNode:caretPosNode;
             
             // create structure
-            var 
-              defStructure = createDefaultStructure(caretPosNode),
-              doc = that.doc,
-              body = doc.body;
+            var doc = that.doc,
+                body = doc.body;
             //console.log("replace", replace);
             
             
             if(replace !== doc) {
-              // any character was inserted
-              body.insertBefore(defStructure, replace);
-              body.removeChild(replace);
+              if (caretPosNode.previousSibling && validateStructure(caretPosNode.previousSibling)) {
+                caretPosNode.previousSibling.appendChild(caretPosNode);
+                that.selection.setAfter(caretPosNode);
+              } else if (caretPosNode.nextSibling && validateStructure(caretPosNode.nextSibling)) {
+                caretPosNode.nextSibling.insertBefore(caretPosNode, caretPosNode.nextSibling.firstChild);
+                that.selection.setAfter(caretPosNode);
+              } else {
+                // any character was inserted
+                var structure = createDefaultStructure(caretPosNode);
+                body.insertBefore(structure, replace);
+                body.removeChild(replace);
+                setCaretPosition(structure)
+              }
             } else {
               if(body.firstChild && body.firstChild.nodeName === "P") {
                 // ctrl, meta + character. Return here.
                 return;
               } else {
                 // backspace or delete, no new character was inserted
-                range.insertNode(defStructure);
+                var structure = createDefaultStructure(caretPosNode);
+                that.selection.getSelection().insertNode(structure);
+                setCaretPosition(structure);
               }
               // some browsers insert a <br> in body... remove them
               for(var i = 0; i < body.childNodes.length; i++) {
@@ -521,13 +536,7 @@
                 }
               }
             }
-            
-            var lastChild = findDeepLastChild(defStructure);
-            if(lastChild.nodeName === "BR") {
-              that.selection.setBefore(lastChild);
-            } else {
-              that.selection.setAfter(lastChild);
-            }
+            that.selection.getSelection().refresh();
             //that.selection.setBefore(defStructure.firstChild.lastChild);
             //console.log("range", defStructure.firstChild.lastChild, range);
             //selectEmptySpan(defStructure.firstChild);   // TEMP ONLY!
