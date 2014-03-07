@@ -29,8 +29,14 @@ var wysihtml5 = {
   
   BACKSPACE_KEY:  8,
   ENTER_KEY:      13,
+  SHIFT_KEY:      16,
   CTRL_KEY:       17,
   ESCAPE_KEY:     27,
   SPACE_KEY:      32,
-  DELETE_KEY:     46
+  DELETE_KEY:     46,
+  ARROW_KEYS:     [37, 38, 39, 40],
+  LEFT_ARROW_KEY: 37,
+  UP_ARROW_KEY:   38,
+  RIGHT_ARROW_KEY:39,
+  DOWN_ARROW_KEY: 40
 };

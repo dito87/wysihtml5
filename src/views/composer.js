@@ -386,6 +386,7 @@
         }
         
         // structure is invalid at this point
+        console.log("structure invalid");
         return false;
       }
       
@@ -465,7 +466,11 @@
           
           //console.log("event", event);
 
-          if (event.ctrlKey || event.keyCode === wysihtml5.CTRL_KEY) {
+          if (
+            event.ctrlKey || 
+            event.keyCode === wysihtml5.CTRL_KEY || 
+            event.keyCode === wysihtml5.SHIFT_KEY
+          ){
             return;
           }
 
@@ -473,8 +478,15 @@
             range = that.selection.getRange(),
             caretPosNode = range.endContainer,
             parentSpanNode = dom.getParentElement(caretPosNode, { nodeName: 'SPAN' }, 10);
-            
-          if(!validateStructure(caretPosNode, 0)) {
+          
+          // Reposition caret if outside a span
+          if(wysihtml5.ARROW_KEYS.indexOf(event.keyCode) > -1){
+            if(caretPosNode.nodeName === "P") {
+              range.selectNodeContents(caretPosNode.childNodes[range.startOffset - 1]);
+              range.collapse();
+            }
+          }
+          else if(!validateStructure(caretPosNode, 0)) {
             // insert default structure here
             // find child element of body to replace first
             var replace = caretPosNode;
@@ -612,6 +624,24 @@
           that.commands.exec("insertLineBreak");
           event.preventDefault();
         }
+      });
+      
+      // Remove surrounding span element when the last character
+      // gets removed.
+      dom.observe(this.doc, "keyup", function(event) {
+        if(event.keyCode !== wysihtml5.BACKSPACE_KEY) {
+          return;
+        }
+        
+        var spans = that.doc.getElementsByTagName('span');
+        for(var i = 0; i < spans.length; i++) {
+          if(spans[i].childNodes.length <= 0) {
+            spans[i].parentElement.removeChild(spans[i]);
+          }
+        }
+        
+        var range = that.selection.getRange();
+        console.log(range);
       });
     }
   });
