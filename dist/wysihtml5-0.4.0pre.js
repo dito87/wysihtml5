@@ -5960,8 +5960,8 @@ wysihtml5.dom.replaceWithChildNodes = function(node) {
       for(var i = 0; i < nodes.length; i++) {              
         var 
           styleParent = findStyleParent(nodes[i]),
-          innerHtml = styleParent === nodes[i].parentNode ? nodes[i].data : styleParent.innerHTML,
-          node = createNode(styleParent, innerHtml);
+          textContent = styleParent === nodes[i].parentNode ? nodes[i].data : styleParent.textContent,
+          node = createNode(styleParent, textContent);
 
         insertBefore(styleParent, node);
 
@@ -6010,9 +6010,9 @@ wysihtml5.dom.replaceWithChildNodes = function(node) {
       range.setEndAfter(lastNode);
     }
     
-    function createNode(parent, innerHtml) {
+    function createNode(parent, text) {
       var el = parent.cloneNode();
-      el.innerHTML = innerHtml;
+      el.textContent = text;
       return el;
     }
 
