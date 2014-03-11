@@ -8864,7 +8864,7 @@ wysihtml5.views.View = Base.extend(
         var range = that.selection.getRange(),
             caretPosNode = range.endContainer;
 
-        if (dom.isEmptyLine(caretPosNode, that.config.nonEmptyLineSelectors)) {
+        if (range.collapsed && dom.isEmptyLine(caretPosNode, that.config.nonEmptyLineSelectors)) {
           var rootNode = caretPosNode;
           while (rootNode.parentNode && rootNode.parentNode.nodeName !== "BODY") {
             rootNode = rootNode.parentNode;
