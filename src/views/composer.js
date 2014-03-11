@@ -469,8 +469,39 @@
         }
      }
      
+     
+      // Remove surrounding span element when the last character
+      // gets removed.
+      dom.observe(this.doc, "keydown", function(event) {
+        if(event.keyCode !== wysihtml5.BACKSPACE_KEY) {
+          return;
+        }
+
+        var range = that.selection.getRange(),
+            caretPosNode = range.endContainer;
+
+        if (dom.isEmptyLine(caretPosNode, that.config.nonEmptyLineSelectors)) {
+          var rootNode = caretPosNode;
+          while (rootNode.parentNode && rootNode.parentNode.nodeName !== "BODY") {
+            rootNode = rootNode.parentNode;
+          }
+          if (rootNode.previousSibling) {
+            var candidateNode = findDeepLastChild(rootNode.previousSibling);
+            if (candidateNode.nodeName === 'SPAN' && !candidateNode.hasChildNodes()) {
+              candidateNode = candidateNode.appendChild(document.createTextNode(wysihtml5.INVISIBLE_SPACE));
+            }
+            that.selection.setAfter(candidateNode);
+            rootNode.parentNode.removeChild(rootNode);
+          }
+
+          console.log('Delete empty line.');
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
+     
       // Ensure proper html structure
-      if(!that.config.useLineBreaks) {        
+      if(!that.config.useLineBreaks) {
         dom.observe(this.element, "keyup", function(event) {
           
           //console.log("event", event);
@@ -492,12 +523,16 @@
             if(caretPosNode.nodeName === "P") {
               range.selectNodeContents(caretPosNode.childNodes[range.startOffset - 1]);
               range.collapse();
+              caretPosNode = range.endContainer;
             }
           }
-          else if(!validateStructure(caretPosNode, 0)) {
+          if(!validateStructure(caretPosNode, 0)) {
             // insert default structure here
             // find child element of body to replace first
-            var replace = caretPosNode.parentNode? caretPosNode.parentNode:caretPosNode;
+            var replace = caretPosNode;
+            while(replace.parentNode && replace.parentNode.nodeName !== "BODY") {
+              replace = replace.parentNode;
+            }
             
             // create structure
             var doc = that.doc,
@@ -517,7 +552,7 @@
                 var structure = createDefaultStructure(caretPosNode);
                 body.insertBefore(structure, replace);
                 body.removeChild(replace);
-                setCaretPosition(structure)
+                setCaretPosition(structure);
               }
             } else {
               if(body.firstChild && body.firstChild.nodeName === "P") {
@@ -635,23 +670,6 @@
         }
       });
       
-      // Remove surrounding span element when the last character
-      // gets removed.
-      dom.observe(this.doc, "keyup", function(event) {
-        if(event.keyCode !== wysihtml5.BACKSPACE_KEY) {
-          return;
-        }
-        
-        var spans = that.doc.getElementsByTagName('span');
-        for(var i = 0; i < spans.length; i++) {
-          if(spans[i].childNodes.length <= 0) {
-            spans[i].parentElement.removeChild(spans[i]);
-          }
-        }
-        
-        var range = that.selection.getRange();
-        console.log(range);
-      });
     }
   });
 })(wysihtml5, rangy);
