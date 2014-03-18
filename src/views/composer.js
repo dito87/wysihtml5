@@ -678,6 +678,16 @@
         }
       });
       
+      dom.observe(this.doc, "keydown", function(event) {
+        var keyCode = event.keyCode;
+        
+        if (keyCode === wysihtml5.ENTER_KEY && event.shiftKey) {
+          event.stopPropagation();
+          event.preventDefault();
+          return;
+        }
+      });
+      
     }
   });
 })(wysihtml5, rangy);
