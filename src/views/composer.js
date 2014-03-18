@@ -526,7 +526,15 @@
               caretPosNode = range.endContainer;
             }
           }
-          if(!validateStructure(caretPosNode, 0)) {
+          if (caretPosNode.nodeName === 'BODY') {
+            var structure = createDefaultStructure(caretPosNode),
+                brs = caretPosNode.querySelectorAll('body > br');
+            range.insertNode(structure);
+            setCaretPosition(structure);
+            for (var i = 0; i < brs.length; i++) {
+              caretPosNode.removeChild(brs[i]);
+            }
+          } else if(!validateStructure(caretPosNode, 0)) {
             // insert default structure here
             // find child element of body to replace first
             var replace = caretPosNode;
