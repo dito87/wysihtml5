@@ -56,7 +56,7 @@
             return v.data;
           }).join("");
           
-          if(text.trim().length > 0) {
+          if(text.length > 0) {
             insertBefore(node, createNode(styleParent, text));
           }
         }
@@ -67,7 +67,7 @@
             return v.data;
           }).join("");
           
-          if(text.trim().length > 0) {
+          if(text.length > 0) {
             insertAfter(node, createNode(styleParent, text));
           }
         }
