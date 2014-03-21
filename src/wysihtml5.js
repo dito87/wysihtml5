@@ -34,6 +34,7 @@ var wysihtml5 = {
   ESCAPE_KEY:     27,
   SPACE_KEY:      32,
   DELETE_KEY:     46,
+  META_KEYS:      [224, 17, 91, 93],
   ARROW_KEYS:     [37, 38, 39, 40],
   LEFT_ARROW_KEY: 37,
   UP_ARROW_KEY:   38,

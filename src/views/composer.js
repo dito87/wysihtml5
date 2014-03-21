@@ -500,17 +500,36 @@
         }
       });
      
+      var HACK_CTRL_PRESSED = false;
+      if(!that.config.useLineBreaks) {
+        dom.observe(this.element, "keypress", function(event) {
+          if(HACK_CTRL_PRESSED) {
+            event.preventDefault();
+          }
+        });
+      }
+      
       // Ensure proper html structure
       if(!that.config.useLineBreaks) {
         dom.observe(this.element, "keyup", function(event) {
           
           //console.log("event", event);
-
+          if (
+            event.keyCode !== wysihtml5.CTRL_KEY && 
+            wysihtml5.META_KEYS.indexOf(event.keyCode) === -1
+          ) {
+            setTimeout(function() { HACK_CTRL_PRESSED = false; }, 10);
+          }
+          
           if (
             event.ctrlKey || 
+            event.metaKey || 
+            HACK_CTRL_PRESSED ||
+            wysihtml5.META_KEYS.indexOf(event.keyCode) > -1 || 
             event.keyCode === wysihtml5.CTRL_KEY || 
             event.keyCode === wysihtml5.SHIFT_KEY
           ){
+            HACK_CTRL_PRESSED = true;
             return;
           }
 
