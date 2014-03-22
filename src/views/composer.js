@@ -503,7 +503,7 @@
       var HACK_CTRL_PRESSED = false;
       if(!that.config.useLineBreaks) {
         dom.observe(this.element, "keypress", function(event) {
-          if(HACK_CTRL_PRESSED) {
+          if(HACK_CTRL_PRESSED && !event.ctrlKey && !event.metaKey) {
             event.preventDefault();
           }
         });
@@ -513,14 +513,7 @@
       if(!that.config.useLineBreaks) {
         dom.observe(this.element, "keyup", function(event) {
           
-          //console.log("event", event);
-          if (
-            event.keyCode !== wysihtml5.CTRL_KEY && 
-            wysihtml5.META_KEYS.indexOf(event.keyCode) === -1
-          ) {
-            setTimeout(function() { HACK_CTRL_PRESSED = false; }, 10);
-          }
-          
+          //console.log("event", event);     
           if (
             event.ctrlKey || 
             event.metaKey || 
@@ -530,6 +523,7 @@
             event.keyCode === wysihtml5.SHIFT_KEY
           ){
             HACK_CTRL_PRESSED = true;
+            setTimeout(function() { HACK_CTRL_PRESSED = false; }, 300);
             return;
           }
 
