@@ -8899,13 +8899,16 @@ wysihtml5.views.View = Base.extend(
         dom.observe(this.element, "keyup", function(event) {
           
           //console.log("event", event);     
+          if (event.keyCode === wysihtml5.SHIFT_KEY) {
+            return;
+          }
+          
           if (
             event.ctrlKey || 
             event.metaKey || 
             HACK_CTRL_PRESSED ||
             wysihtml5.META_KEYS.indexOf(event.keyCode) > -1 || 
-            event.keyCode === wysihtml5.CTRL_KEY || 
-            event.keyCode === wysihtml5.SHIFT_KEY
+            event.keyCode === wysihtml5.CTRL_KEY
           ){
             HACK_CTRL_PRESSED = true;
             setTimeout(function() { HACK_CTRL_PRESSED = false; }, 300);
