@@ -4957,7 +4957,7 @@ wysihtml5.dom.parse = (function() {
     // Insert new DOM tree
     element.appendChild(fragment);
     
-    _wrapTextNodes(element, defaultClass, context);
+    _wrapTextNodes(element, defaultClass, context, this.allowedTextWrapper);
     _wrapBodySpans(element, context);
     wysihtml5.dom.flatten(element);
     return isString ? wysihtml5.quirks.getCorrectInnerHTML(element) : element;
@@ -4986,13 +4986,13 @@ wysihtml5.dom.parse = (function() {
    * @param {type} context document
    * @returns {undefined}
    */
-  function _wrapTextNodes(node, defaultClass, context) {
+  function _wrapTextNodes(node, defaultClass, context, allowedElements) {
     if(node.nodeType !== wysihtml5.TEXT_NODE) {
       for(var i = 0; i < node.childNodes.length; i++) {
-        _wrapTextNodes(node.childNodes[i], defaultClass, context);
+        _wrapTextNodes(node.childNodes[i], defaultClass, context, allowedElements);
       }
     }
-    else if(node.parentNode.nodeName !== "SPAN") {
+    else if(allowedElements.indexOf(node.parentNode.nodeName) < 0) {
       var 
         element = node.data.trim().length > 0 
           ? context.createElement("SPAN")
@@ -5357,6 +5357,14 @@ wysihtml5.dom.parse = (function() {
         attributeValue = (attributeValue || "").replace(REG_EXP, "");
         return attributeValue || null;
       };
+    })(),
+    
+    notEmpty: (function() {
+      return function(attributeValue) {
+        return (typeof attributeValue !== 'undefined'
+                && attributeValue !== null 
+                && attributeValue.trim().length > 0)?attributeValue:undefined;
+      }
     })()
   };
   
@@ -8730,8 +8738,9 @@ wysihtml5.views.View = Base.extend(
           USE_NATIVE_LINE_BREAK_INSIDE_TAGS = ["LI", "P", "H1", "H2", "H3", "H4", "H5", "H6"],
           LIST_TAGS                         = ["UL", "OL", "MENU"],
           defaultMarkup = that.config.defaultMarkup,
-          allowedMarkup = that.config.allowedMarkup   
-      
+          allowedMarkup = that.config.allowedMarkup,
+          allowedTextWrapper = that.config.allowedTextWrapper;
+
       function adjust(selectedNode) {
         var parentElement = dom.getParentElement(selectedNode, { nodeName: ["P", "DIV"] }, 2);
         if (parentElement) {

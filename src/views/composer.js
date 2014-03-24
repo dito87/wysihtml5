@@ -345,8 +345,9 @@
           USE_NATIVE_LINE_BREAK_INSIDE_TAGS = ["LI", "P", "H1", "H2", "H3", "H4", "H5", "H6"],
           LIST_TAGS                         = ["UL", "OL", "MENU"],
           defaultMarkup = that.config.defaultMarkup,
-          allowedMarkup = that.config.allowedMarkup   
-      
+          allowedMarkup = that.config.allowedMarkup,
+          allowedTextWrapper = that.config.allowedTextWrapper;
+
       function adjust(selectedNode) {
         var parentElement = dom.getParentElement(selectedNode, { nodeName: ["P", "DIV"] }, 2);
         if (parentElement) {
