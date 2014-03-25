@@ -8874,26 +8874,58 @@ wysihtml5.views.View = Base.extend(
         var range = that.selection.getRange(),
             caretPosNode = range.endContainer;
 
-        if (range.collapsed && dom.isEmptyLine(caretPosNode, that.config.nonEmptyLineSelectors)) {
-          var rootNode = caretPosNode;
-          while (rootNode.parentNode && rootNode.parentNode.nodeName !== "BODY") {
-            rootNode = rootNode.parentNode;
-          }
-          if (rootNode.previousSibling) {
-            var candidateNode = findDeepLastChild(rootNode.previousSibling);
-            if (candidateNode.nodeName === 'SPAN' && !candidateNode.hasChildNodes()) {
-              candidateNode = candidateNode.appendChild(document.createTextNode(wysihtml5.INVISIBLE_SPACE));
+        if (range.collapsed) {
+          if (dom.isEmptyLine(caretPosNode, that.config.nonEmptyLineSelectors)) {
+            var rootNode = caretPosNode;
+            while (rootNode.parentNode && rootNode.parentNode.nodeName !== "BODY") {
+              rootNode = rootNode.parentNode;
             }
-            that.selection.setAfter(candidateNode);
-            rootNode.parentNode.removeChild(rootNode);
-          }
+            if (rootNode.previousSibling) {
+              var candidateNode = findDeepLastChild(rootNode.previousSibling);
+              if (candidateNode.nodeName === 'SPAN' && !candidateNode.hasChildNodes()) {
+                candidateNode = candidateNode.appendChild(document.createTextNode(wysihtml5.INVISIBLE_SPACE));
+              }
+              that.selection.setAfter(candidateNode);
+              rootNode.parentNode.removeChild(rootNode);
+            }
 
-          console.log('Delete empty line.');
-          event.preventDefault();
-          event.stopImmediatePropagation();
+            console.log('Delete empty line.');
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          } else if (caretPosNode.nodeType === wysihtml5.TEXT_NODE
+                  && caretPosNode.textContent.length === 1) {
+            var rootNode = dom.getParentElement(caretPosNode, {nodeName: 'SPAN'}, 2);
+            if (rootNode.previousSibling) {
+              var candidateNode = findDeepLastChild(rootNode.previousSibling);
+              if (candidateNode.nodeName === 'SPAN' && !candidateNode.hasChildNodes()) {
+                candidateNode = candidateNode.appendChild(document.createTextNode(wysihtml5.INVISIBLE_SPACE));
+              }
+              that.selection.setAfter(candidateNode);
+              rootNode.parentNode.removeChild(rootNode);
+              event.preventDefault();
+              event.stopImmediatePropagation();
+            }
+          }
         }
       });
-     
+
+      // Remove surrounding span element when the last character
+      // gets removed.
+      dom.observe(this.doc, "keyup", function(event) {
+        var range = that.selection.getRange();
+        if (range.collapsed) {
+          var caretPosNode = range.endContainer;
+          if (caretPosNode.nodeType === wysihtml5.TEXT_NODE
+                  && caretPosNode.textContent.length > 1
+                  && caretPosNode.textContent.charAt(0) === wysihtml5.INVISIBLE_SPACE) {
+            caretPosNode.textContent = caretPosNode.textContent.slice(1, caretPosNode.textContent.length);
+            range.setStart(caretPosNode, range.startOffset - 1);
+            range.collapse(false);
+            that.selection.setSelection(range);
+          }
+        }
+      });
+
       var HACK_CTRL_PRESSED = false;
       if(!that.config.useLineBreaks) {
         dom.observe(this.element, "keypress", function(event) {
