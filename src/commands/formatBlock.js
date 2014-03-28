@@ -194,7 +194,7 @@
         }
 
         if(blockElements.length > 0 && blockElements[0] !== null){
-          composer.selection.executeAndRestore(function() {
+          composer.selection.executeAndRestoreSimple(function() {
             for(var i = 0; i < blockElements.length; i++) {
               // Rename current block element to new block element and add class
               if (nodeName) {
