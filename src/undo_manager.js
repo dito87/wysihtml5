@@ -249,6 +249,12 @@
     
     getChildNodeByIndex: function(parent, index) {
       return parent.childNodes[index];
+    },
+    
+    reset: function() {
+      this.position = 0;
+      this.historyStr = [];
+      this.historyDom = [];
     }
   });
 })(wysihtml5);
