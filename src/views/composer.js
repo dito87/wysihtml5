@@ -375,7 +375,7 @@
 
         // recursive validation function
         function doValidate(n, idx, lvl) {
-          if(n && n.nodeName === allowedMarkup[idx][lvl]) {   
+          if(n && n.nodeName.toUpperCase() === allowedMarkup[idx][lvl]) {   
             if(allowedMarkup[idx][lvl + 1]) {
               return doValidate(n.parentNode, idx, lvl + 1);
             } else {
