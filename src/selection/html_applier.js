@@ -51,8 +51,8 @@
   
   function hasSameClasses(el1, el2) {
     var 
-      el1ClassList = el1.className.trim().split(" "),
-      el2ClassList = el2.className.trim().split(" ");
+      el1ClassList = el1.className.trim().split(/ +/),
+      el2ClassList = el2.className.trim().split(/ +/);
       
     if(el1ClassList.length !== el2ClassList.length) {
       return false;
