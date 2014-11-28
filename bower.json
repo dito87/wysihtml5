@@ -1,9 +1,9 @@
 {
   "name": "wysihtml5",
-  "version": "0.5.0-snapshot",
+  "version": "0.6.0-snapshot",
   "homepage": "https://github.com/dito87/wysihtml5",
   "description": "wysihtml5 is an open source rich text editor based on HTML5 technology and the progressive-enhancement approach.",
-  "main": ["dist/wysihtml5-0.5.0-snapshot.js", "dist/wysihtml5-0.5.0-snapshot.min.js"],
+  "main": ["dist/wysihtml5-0.6.0-snapshot.js", "dist/wysihtml5-0.6.0-snapshot.min.js"],
   "keywords": [
     "wysiwyg",
     "text",
