@@ -191,7 +191,7 @@
       if(!range.collapsed && (firstNode.length > 1 || range.startOffset === textNodes[0].length)) {
         textNodes.splice(0,1);
       }
-      if(!range.collapsed && (lastNodeCleanText.length > 1 && range.endOffset === 0)) {
+      if(wysihtml5.browser.selectionRangeProblems() && !range.collapsed && (lastNodeCleanText.length > 1 && range.endOffset === 0)) {
         // Remove last text node if the content (trimmed) is longer than 1 character and the selection offset is 0.
         textNodes.splice(textNodes.length - 1, 1);
       }

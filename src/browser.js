@@ -363,6 +363,10 @@ wysihtml5.browser = (function() {
     
     needsLineBreakOnEmptyLine: function() {
       return !isIE9;
+    },
+
+    selectionRangeProblems: function() {
+      return isIE;
     }
   };
 })();
