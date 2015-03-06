@@ -1,5 +1,5 @@
 /**
- * @license wysihtml5 v0.5.0-snapshot
+ * @license wysihtml5 v0.5.0
  * https://github.com/xing/wysihtml5
  *
  * Author: Christopher Blum (https://github.com/tiff)
@@ -9,7 +9,7 @@
  *
  */
 var wysihtml5 = {
-  version: "0.5.0-snapshot",
+  version: "0.5.0",
   
   // namespaces
   commands:   {},
